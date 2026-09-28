@@ -6,7 +6,7 @@ import { formatTime } from '@/shared/utils/format-time';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { Pencil, Check, X, Clock, Trash2, RotateCcw, Target, ChevronUp, ChevronDown } from 'lucide-react';
+import { Pencil, Check, X, Trash2, Minus, Plus, Play } from 'lucide-react';
 
 interface LineItemProps {
   line: LyricLine;
@@ -23,9 +23,6 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
     setLineTiming, 
     clearLineTiming, 
     setCurrentLineIndex, 
-    syncFromLine,
-    goToPreviousLine,
-    goToNextLine,
   } = useSyncStore();
   const audio = useAudioEngine();
 
@@ -75,41 +72,28 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
     }
   };
 
-  const handleSyncFromHere = (e: React.MouseEvent) => {
+  const handlePlayFromLine = (e: React.MouseEvent) => {
     e.stopPropagation();
-    syncFromLine(index, (cueTime) => {
-      audio.engine.seek(cueTime);
-    });
-    if (audio.state.playbackState !== 'playing') {
-      audio.play();
-      if (mode !== 'syncing') {
-        useSyncStore.getState().setMode('syncing');
+    setCurrentLineIndex(index);
+
+    let seekTarget = 0;
+    if (line.start !== null) {
+      seekTarget = line.start;
+    } else {
+      const { lines } = useSyncStore.getState();
+      for (let i = index - 1; i >= 0; i--) {
+        if (lines[i].start !== null) {
+          seekTarget = lines[i].start!;
+          break;
+        }
       }
     }
-  };
 
-  const handleRewindCurrent = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const current = audio.engine.getCurrentTime();
-    const target = Math.max(0, current - 2.5);
-    audio.engine.seek(target);
-    if (audio.state.playbackState !== 'playing') {
-      audio.play();
+    audio.engine.seek(seekTarget);
+    audio.play();
+    if (mode !== 'syncing') {
+      useSyncStore.getState().setMode('syncing');
     }
-  };
-
-  const handlePrevLine = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    goToPreviousLine((cueTime) => {
-      audio.engine.seek(cueTime);
-    });
-  };
-
-  const handleNextLine = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    goToNextLine((cueTime) => {
-      audio.engine.seek(cueTime);
-    });
   };
 
   const handleSnapToPlayhead = (e: React.MouseEvent) => {
@@ -120,7 +104,12 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
 
   const handleNudge = (e: React.MouseEvent, deltaSec: number) => {
     e.stopPropagation();
-    nudgeLineTiming(line.id, deltaSec);
+    if (line.start === null) {
+      const current = audio.engine.getCurrentTime();
+      setLineTiming(line.id, current);
+    } else {
+      nudgeLineTiming(line.id, deltaSec);
+    }
   };
 
   const handleClear = (e: React.MouseEvent) => {
@@ -133,9 +122,9 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
       ref={isActive ? activeRef : null}
       onClick={handleLineClick}
       className={cn(
-        "group relative flex flex-col md:flex-row md:items-center justify-between gap-3 px-5 py-3.5 rounded-2xl transition-all duration-200 cursor-pointer border select-none w-full",
+        "group relative flex items-center justify-between gap-4 px-4 py-3 rounded-2xl transition-all duration-200 cursor-pointer border select-none w-full",
         isActive
-          ? "bg-gradient-to-r from-blue-600/25 via-indigo-600/15 to-transparent border-blue-500/80 shadow-[0_0_30px_rgba(59,130,246,0.22)] ring-1 ring-blue-500/50 scale-[1.005]"
+          ? "bg-gradient-to-r from-blue-600/25 via-indigo-600/15 to-transparent border-blue-500/80 shadow-[0_0_30px_rgba(59,130,246,0.22)] ring-1 ring-blue-500/50 scale-[1.004]"
           : isSynced
           ? "bg-zinc-900/40 hover:bg-zinc-900/80 border-zinc-800/80 hover:border-zinc-700/80"
           : isSkipped
@@ -143,19 +132,86 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
           : "bg-transparent hover:bg-zinc-900/30 border-transparent hover:border-zinc-800/50 opacity-60 hover:opacity-100"
       )}
     >
-      {/* Left: Indicator, Index + Text */}
-      <div className="flex items-center gap-3.5 flex-1 min-w-0">
+      {/* Left: Indicator, Index + Timing cluster [-] timestamp [+] [>] */}
+      <div className="flex items-center gap-3 shrink-0">
         {isActive && (
           <div className="w-1.5 h-6 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.9)] shrink-0" />
         )}
 
         <span className={cn(
-          "font-mono text-xs shrink-0 w-6 text-center",
+          "font-mono text-xs w-6 text-center shrink-0",
           isActive ? "text-blue-400 font-bold" : "text-zinc-600 font-medium"
         )}>
           {String(index + 1).padStart(2, '0')}
         </span>
 
+        {/* Timing cluster: [-] timestamp [+] [>] */}
+        <div className="flex items-center bg-zinc-950/90 rounded-xl border border-zinc-800 p-0.5 shadow-inner">
+          {/* Subtract button [-] */}
+          <button
+            type="button"
+            onClick={(e) => handleNudge(e, e.shiftKey ? -0.01 : -0.05)}
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            title="Restar 50ms (Shift+clic: -10ms)"
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Timestamp text */}
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSnapToPlayhead(e);
+            }}
+            className={cn(
+              "font-mono text-xs font-bold px-2 py-0.5 rounded min-w-[65px] text-center select-none cursor-pointer hover:bg-zinc-800/60 transition-colors",
+              isActive
+                ? "bg-blue-600/30 text-blue-200 border border-blue-500/40"
+                : isSynced
+                ? "text-zinc-200"
+                : "text-zinc-600"
+            )}
+            title={isSynced ? "Tiempo [mm:ss.xx] (clic para fijar a cabezal)" : "Pendiente (clic para fijar al audio actual)"}
+          >
+            {isSynced && line.start !== null ? formatTime(line.start) : "--:--.--"}
+          </div>
+
+          {/* Add button [+] */}
+          <button
+            type="button"
+            onClick={(e) => handleNudge(e, e.shiftKey ? 0.01 : 0.05)}
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            title="Sumar 50ms (Shift+clic: +10ms)"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Play from this line button [>] */}
+          <button
+            type="button"
+            onClick={handlePlayFromLine}
+            className="ml-1 p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 hover:border-blue-500 transition-all shadow-sm"
+            title="Reproducir desde esta línea [>]"
+          >
+            <Play className="h-3.5 w-3.5 fill-current" />
+          </button>
+        </div>
+
+        {/* Delete timestamp button (hover only if synced) */}
+        {isSynced && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="opacity-0 group-hover:opacity-100 p-1 text-zinc-600 hover:text-red-400 rounded transition-opacity"
+            title="Quitar sincronización"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Main Lyric Text Area (takes remaining width) */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
         {isEditingText ? (
           <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
             <Input
@@ -180,7 +236,7 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
             <span className={cn(
               "tracking-tight truncate transition-all duration-150",
               isActive ? "text-lg md:text-xl font-black text-white" :
-              isSynced ? "text-base md:text-lg font-medium text-zinc-200" :
+              isSynced ? "text-base md:text-lg font-semibold text-zinc-200" :
               isSkipped ? "text-base md:text-lg text-zinc-500 line-through" :
               "text-base md:text-lg text-zinc-400 font-normal"
             )}>
@@ -202,165 +258,12 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
         )}
       </div>
 
-      {/* Right: Timestamp & Controls */}
-      <div className="flex flex-wrap items-center gap-2 shrink-0 self-end md:self-auto" onClick={(e) => e.stopPropagation()}>
-        {isActive && (
-          <div className="flex items-center gap-1.5 bg-blue-950/40 border border-blue-500/40 p-1 rounded-xl">
-            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">
-              ACTIVA
-            </span>
-
-            {/* Musixmatch Navigation on Active Line */}
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={handlePrevLine}
-              className="h-7 text-xs font-mono text-zinc-300 hover:text-white hover:bg-blue-500/20 px-2"
-              title="Línea anterior (-2.5s) (Atajo: ↑ o P)"
-            >
-              <ChevronUp className="h-3.5 w-3.5 mr-0.5 text-blue-400" />
-              Ant.
-            </Button>
-
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={handleRewindCurrent}
-              className="h-7 text-xs font-mono text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 px-2"
-              title="Rebobinar 2.5s para volver a marcar esta línea (Atajo: R)"
-            >
-              <RotateCcw className="mr-1 h-3 w-3" />
-              Re-marcar
-            </Button>
-
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={handleNextLine}
-              className="h-7 text-xs font-mono text-zinc-300 hover:text-white hover:bg-blue-500/20 px-2"
-              title="Línea siguiente (Atajo: ↓ o N)"
-            >
-              Sig.
-              <ChevronDown className="h-3.5 w-3.5 ml-0.5 text-blue-400" />
-            </Button>
-          </div>
-        )}
-
-        {isSynced && line.start !== null ? (
-          <div className="flex items-center gap-1.5 bg-zinc-950/80 p-1 rounded-xl border border-zinc-800">
-            {/* Fine Nudge Controls */}
-            <div className="flex items-center gap-0.5">
-              <button
-                type="button"
-                onClick={(e) => handleNudge(e, -0.1)}
-                className="px-1.5 py-0.5 text-[11px] font-mono text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded border border-zinc-800/80 transition-colors"
-                title="Retroceder 100ms (-0.1s)"
-              >
-                -100ms
-              </button>
-              <button
-                type="button"
-                onClick={(e) => handleNudge(e, -0.01)}
-                className="px-1 py-0.5 text-[11px] font-mono text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded border border-zinc-800/80 transition-colors"
-                title="Retroceder 10ms (-0.01s)"
-              >
-                -10ms
-              </button>
-            </div>
-
-            {/* Current Timestamp Display */}
-            <div className={cn(
-              "font-mono text-xs font-bold px-2 py-0.5 rounded",
-              isActive ? "bg-blue-600/30 text-blue-200 border border-blue-500/40" : "bg-zinc-900 text-zinc-200"
-            )}>
-              {formatTime(line.start)}
-            </div>
-
-            {/* Forward Nudge Controls */}
-            <div className="flex items-center gap-0.5">
-              <button
-                type="button"
-                onClick={(e) => handleNudge(e, 0.01)}
-                className="px-1 py-0.5 text-[11px] font-mono text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded border border-zinc-800/80 transition-colors"
-                title="Avanzar 10ms (+0.01s)"
-              >
-                +10ms
-              </button>
-              <button
-                type="button"
-                onClick={(e) => handleNudge(e, 0.1)}
-                className="px-1.5 py-0.5 text-[11px] font-mono text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded border border-zinc-800/80 transition-colors"
-                title="Avanzar 100ms (+0.1s)"
-              >
-                +100ms
-              </button>
-            </div>
-
-            {/* Snap to current playhead */}
-            <button
-              type="button"
-              onClick={handleSnapToPlayhead}
-              className="p-1 text-zinc-400 hover:text-blue-400 rounded hover:bg-blue-500/10 transition-colors"
-              title="Fijar al tiempo actual del audio"
-            >
-              <Clock className="h-3.5 w-3.5" />
-            </button>
-
-            {/* Sync from here (jump to this line and start playback) */}
-            {!isActive && (
-              <button
-                type="button"
-                onClick={handleSyncFromHere}
-                className="p-1 text-zinc-400 hover:text-blue-400 rounded hover:bg-blue-500/10 transition-colors"
-                title="Sincronizar desde esta línea (rebobina 2.5s y reproduce)"
-              >
-                <Target className="h-3.5 w-3.5 text-blue-400" />
-              </button>
-            )}
-
-            {/* Clear timing */}
-            <button
-              type="button"
-              onClick={handleClear}
-              className="p-1 text-zinc-500 hover:text-red-400 rounded hover:bg-red-500/10 transition-colors"
-              title="Quitar sincronización"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5">
-            {!isActive && (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={handleSyncFromHere}
-                className="h-7 text-xs font-mono text-zinc-400 hover:text-blue-300 hover:bg-blue-500/10 px-2"
-                title="Sincronizar desde esta línea (rebobina 2.5s y reproduce)"
-              >
-                <Target className="mr-1 h-3 w-3 text-blue-400" />
-                Sincronizar desde aquí
-              </Button>
-            )}
-
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={handleSnapToPlayhead}
-              className="h-7 text-xs font-mono text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60 px-2"
-              title="Sincronizar esta línea con el tiempo actual del reproductor"
-            >
-              <Clock className="mr-1.5 h-3 w-3" />
-              Sincronizar aquí
-            </Button>
-          </div>
-        )}
-      </div>
+      {/* Right Indicator (Active badge) */}
+      {isActive && (
+        <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 shrink-0">
+          ACTIVA
+        </span>
+      )}
     </div>
   );
 }

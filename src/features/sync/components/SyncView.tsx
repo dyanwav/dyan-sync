@@ -10,8 +10,8 @@ import {
   FastForward, 
   FileEdit, 
   Settings2, 
-  ChevronLeft, 
-  ChevronRight, 
+  ArrowUp, 
+  ArrowDown, 
   RotateCcw,
   ArrowRight,
   Music2
@@ -220,7 +220,7 @@ export function SyncView({ onOpenCalibration, onContinueToPreview }: SyncViewPro
         {/* Native Smooth Scroll Container with Custom Scrollbar */}
         <div 
           ref={scrollContainerRef}
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 md:px-16 lg:px-32 py-12 space-y-3 scroll-smooth custom-scrollbar relative z-10"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 md:px-16 lg:px-28 py-10 space-y-3 scroll-smooth custom-scrollbar relative z-10"
         >
           {lines.map((line, index) => (
             <LineItem
@@ -233,48 +233,29 @@ export function SyncView({ onOpenCalibration, onContinueToPreview }: SyncViewPro
           ))}
           
           {/* Bottom extra cushion so last lines can be centered */}
-          <div className="h-40" />
+          <div className="h-44" />
         </div>
       </main>
 
       {/* Bottom Musixmatch Studio Dock */}
-      <footer className="shrink-0 border-t border-zinc-800/90 bg-zinc-950/95 backdrop-blur-2xl p-4 flex flex-col gap-3 shadow-[0_-10px_35px_rgba(0,0,0,0.5)] z-20">
+      <footer className="shrink-0 border-t border-zinc-800/90 bg-zinc-950/95 backdrop-blur-2xl px-6 py-4 flex flex-col gap-3.5 shadow-[0_-12px_35px_rgba(0,0,0,0.5)] z-20">
         
-        {/* Row 1: Audio Scrubber & Transport Controls */}
-        <div className="w-full flex justify-center">
-          <div className="w-full max-w-4xl">
-            <TransportControls audio={audio} />
-          </div>
-        </div>
-
-        {/* Row 2: Musixmatch Primary Sync & Line Navigation Controls */}
+        {/* Row 1 (ENCIMA del reproductor): Línea Anterior (↑), Línea Siguiente (↓), TAP y Acciones */}
         <div className="w-full max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
           
-          {/* Left: Line Navigation Cluster (Musixmatch Style) */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* Navegación Musixmatch con flechas arriba y abajo */}
+          <div className="flex items-center gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={handlePrevLine}
               disabled={currentLineIndex <= 0}
-              className="bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 h-12 px-3 text-xs"
+              className="bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 h-11 px-3 text-xs"
               title="Línea anterior (-2.5s) (Atajo: ↑ o P)"
             >
-              <ChevronLeft className="h-4 w-4 mr-1 text-blue-400" />
-              <span>Línea Ant.</span>
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleRewindCurrent}
-              className="bg-zinc-900/90 border-zinc-800 text-amber-300 hover:text-amber-200 hover:bg-zinc-800 h-12 px-3 text-xs"
-              title="Rebobinar 2.5s en línea actual (Atajo: R)"
-            >
-              <RotateCcw className="h-4 w-4 mr-1" />
-              <span>-2.5s</span>
+              <ArrowUp className="h-4 w-4 mr-1 text-blue-400" />
+              <span>Anterior</span>
             </Button>
 
             <Button
@@ -283,24 +264,36 @@ export function SyncView({ onOpenCalibration, onContinueToPreview }: SyncViewPro
               size="sm"
               onClick={handleNextLine}
               disabled={currentLineIndex >= lines.length - 1}
-              className="bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 h-12 px-3 text-xs"
+              className="bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 h-11 px-3 text-xs"
               title="Línea siguiente (Atajo: ↓ o N)"
             >
-              <span>Línea Sig.</span>
-              <ChevronRight className="h-4 w-4 ml-1 text-blue-400" />
+              <ArrowDown className="h-4 w-4 mr-1 text-blue-400" />
+              <span>Siguiente</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleRewindCurrent}
+              className="text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 h-11 px-2.5"
+              title="Rebobinar 2.5s en línea actual (Atajo: R)"
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+              <span>-2.5s</span>
             </Button>
           </div>
 
-          {/* Center: The Big Ergonomic Tap Button */}
+          {/* Botón Central Ergonómico de TAP */}
           <button
             type="button"
             onClick={handleTap}
             className={cn(
-              "flex-1 min-w-[240px] max-w-md h-13 rounded-2xl text-white font-extrabold text-base md:text-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 border select-none mx-auto",
+              "flex-1 min-w-[220px] max-w-sm h-12 rounded-xl text-white font-extrabold text-base transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 border select-none mx-auto",
               mode === 'syncing'
-                ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-white/30 shadow-[0_0_25px_rgba(79,70,229,0.4)]"
+                ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-white/30 shadow-[0_0_20px_rgba(79,70,229,0.4)]"
                 : mode === 'paused'
-                ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 border-white/20 shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+                ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 border-white/20 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
                 : "bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 hover:from-zinc-700 hover:to-zinc-600 border-zinc-600"
             )}
           >
@@ -312,14 +305,14 @@ export function SyncView({ onOpenCalibration, onContinueToPreview }: SyncViewPro
             </span>
           </button>
 
-          {/* Right: Aux Tools (Undo, Silence, Skip) */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* Herramientas Auxiliares */}
+          <div className="flex items-center gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={handleUndo}
-              className="bg-zinc-900/90 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white h-12 px-3 text-xs"
+              className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white h-11 px-3 text-xs"
               title="Deshacer última marca (Backspace / Ctrl+Z)"
             >
               <Undo2 className="h-4 w-4 mr-1 text-amber-400" />
@@ -331,7 +324,7 @@ export function SyncView({ onOpenCalibration, onContinueToPreview }: SyncViewPro
               variant="outline"
               size="sm"
               onClick={handleSilence}
-              className="bg-zinc-900/90 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white h-12 px-3 text-xs"
+              className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white h-11 px-3 text-xs"
               title="Marcar silencio instrumental (B)"
             >
               <VolumeX className="h-4 w-4 mr-1 text-purple-400" />
@@ -343,14 +336,22 @@ export function SyncView({ onOpenCalibration, onContinueToPreview }: SyncViewPro
               variant="outline"
               size="sm"
               onClick={handleSkip}
-              className="bg-zinc-900/90 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white h-12 px-3 text-xs"
-              title="Omitir línea sin timestamp (S)"
+              className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white h-11 px-3 text-xs"
+              title="Omitir línea (S)"
             >
               <FastForward className="h-4 w-4 mr-1 text-blue-400" />
               <span>Saltar</span>
             </Button>
           </div>
         </div>
+
+        {/* Row 2 (DEBAJO de la navegación): Reproductor de audio y Scrubber */}
+        <div className="w-full flex justify-center pt-2 border-t border-zinc-900">
+          <div className="w-full max-w-4xl">
+            <TransportControls audio={audio} />
+          </div>
+        </div>
+
       </footer>
 
       {/* Edit Lyrics Modal */}

@@ -32,13 +32,14 @@ export function PreviewScreen() {
 
   const [customBgBitmap, setCustomBgBitmap] = useState<ImageBitmap | null>(null);
 
-  // Load custom photo bitmap whenever customImageDataUrl changes
+  // Load custom photo bitmap whenever customImageDataUrl or contrast changes
   useEffect(() => {
     let cancelled = false;
     const loadCustom = async () => {
       if (project?.settings.theme.preset === 'custom' && project?.settings.theme.customImageDataUrl) {
         try {
-          const bmp = await createCustomPhotoBackground(project.settings.theme.customImageDataUrl, 800, 1422);
+          const contrast = project.settings.theme.contrast ?? 60;
+          const bmp = await createCustomPhotoBackground(project.settings.theme.customImageDataUrl, 800, 1422, contrast);
           if (!cancelled) setCustomBgBitmap(bmp);
         } catch (err) {
           console.error('Error generating custom photo bitmap:', err);
@@ -52,7 +53,7 @@ export function PreviewScreen() {
     return () => {
       cancelled = true;
     };
-  }, [project?.settings.theme.preset, project?.settings.theme.customImageDataUrl]);
+  }, [project?.settings.theme.preset, project?.settings.theme.customImageDataUrl, project?.settings.theme.contrast]);
 
   const bgBitmap = useMemo(() => {
     if (project?.settings.theme.preset === 'custom' && customBgBitmap) {
@@ -165,9 +166,20 @@ export function PreviewScreen() {
               <ThemeSelector 
                 selectedThemeId={project?.settings.theme.preset || 'dark'} 
                 customImageDataUrl={project?.settings.theme.customImageDataUrl}
+                contrast={project?.settings.theme.contrast ?? 60}
                 onSelect={handleThemeSelect} 
                 onUploadCustomImage={handleUploadCustomImage}
                 onRemoveCustomImage={handleRemoveCustomImage}
+                onContrastChange={(contrast) => {
+                  if (project) {
+                    updateSettings({
+                      theme: {
+                        ...project.settings.theme,
+                        contrast
+                      }
+                    });
+                  }
+                }}
               />
             </div>
 

@@ -6,9 +6,11 @@ import { ImagePlus, X, RefreshCw, Check, Loader2 } from 'lucide-react';
 interface ThemeSelectorProps {
   selectedThemeId: string;
   customImageDataUrl?: string;
+  contrast?: number;
   onSelect: (themeId: string) => void;
   onUploadCustomImage?: (dataUrl: string) => void;
   onRemoveCustomImage?: () => void;
+  onContrastChange?: (contrast: number) => void;
   className?: string;
 }
 
@@ -63,9 +65,11 @@ function processUploadedImage(file: File): Promise<string> {
 export function ThemeSelector({
   selectedThemeId,
   customImageDataUrl,
+  contrast = 60,
   onSelect,
   onUploadCustomImage,
   onRemoveCustomImage,
+  onContrastChange,
   className,
 }: ThemeSelectorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -107,61 +111,89 @@ export function ThemeSelector({
         </div>
 
         {customImageDataUrl ? (
-          <div className="flex items-center gap-3 bg-zinc-950/70 border border-zinc-800 p-2.5 rounded-xl">
-            {/* Thumbnail */}
-            <button
-              type="button"
-              onClick={() => onSelect('custom')}
-              className={cn(
-                "w-12 h-16 rounded-lg overflow-hidden relative shrink-0 border-2 transition-all cursor-pointer shadow-md",
-                selectedThemeId === 'custom'
-                  ? "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)] ring-2 ring-blue-500/30"
-                  : "border-zinc-700 opacity-70 hover:opacity-100"
-              )}
-            >
-              <img
-                src={customImageDataUrl}
-                alt="Custom background"
-                className="w-full h-full object-cover"
-              />
-              {selectedThemeId === 'custom' && (
-                <div className="absolute inset-0 bg-blue-600/30 flex items-center justify-center">
-                  <Check className="w-4 h-4 text-white drop-shadow" />
-                </div>
-              )}
-            </button>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 bg-zinc-950/70 border border-zinc-800 p-2.5 rounded-xl">
+              {/* Thumbnail */}
+              <button
+                type="button"
+                onClick={() => onSelect('custom')}
+                className={cn(
+                  "w-12 h-16 rounded-lg overflow-hidden relative shrink-0 border-2 transition-all cursor-pointer shadow-md",
+                  selectedThemeId === 'custom'
+                    ? "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)] ring-2 ring-blue-500/30"
+                    : "border-zinc-700 opacity-70 hover:opacity-100"
+                )}
+              >
+                <img
+                  src={customImageDataUrl}
+                  alt="Custom background"
+                  className="w-full h-full object-cover"
+                />
+                {selectedThemeId === 'custom' && (
+                  <div className="absolute inset-0 bg-blue-600/30 flex items-center justify-center">
+                    <Check className="w-4 h-4 text-white drop-shadow" />
+                  </div>
+                )}
+              </button>
 
-            {/* Controls */}
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold text-zinc-200 truncate">Foto del usuario</div>
-              <div className="text-[11px] text-zinc-500 mt-0.5">Recorte 9:16 + oscurecido automático</div>
-              <div className="flex gap-2 mt-2">
-                <button
-                  type="button"
-                  disabled={isProcessing}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-400 hover:text-blue-300 cursor-pointer disabled:opacity-50"
-                >
-                  {isProcessing ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-3 h-3" />
-                  )}
-                  {isProcessing ? 'Procesando...' : 'Cambiar'}
-                </button>
-                {onRemoveCustomImage && (
+              {/* Controls */}
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold text-zinc-200 truncate">Foto del usuario</div>
+                <div className="text-[11px] text-zinc-500 mt-0.5">Recorte 9:16 + oscurecido automático</div>
+                <div className="flex gap-2 mt-2">
                   <button
                     type="button"
                     disabled={isProcessing}
-                    onClick={onRemoveCustomImage}
-                    className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 hover:text-red-300 cursor-pointer ml-2 disabled:opacity-50"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-400 hover:text-blue-300 cursor-pointer disabled:opacity-50"
                   >
-                    <X className="w-3 h-3" />
-                    Quitar
+                    {isProcessing ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-3 h-3" />
+                    )}
+                    {isProcessing ? 'Procesando...' : 'Cambiar'}
                   </button>
-                )}
+                  {onRemoveCustomImage && (
+                    <button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={onRemoveCustomImage}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 hover:text-red-300 cursor-pointer ml-2 disabled:opacity-50"
+                    >
+                      <X className="w-3 h-3" />
+                      Quitar
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* Manual Contrast Slider when custom image is selected */}
+            {selectedThemeId === 'custom' && onContrastChange && (
+              <div className="bg-zinc-950/60 border border-zinc-800/80 p-3 rounded-xl space-y-2 mt-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
+                    Oscurecido / Contraste
+                  </span>
+                  <span className="font-mono font-bold text-blue-400">{contrast}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={15}
+                  max={95}
+                  step={1}
+                  value={contrast}
+                  onChange={(e) => onContrastChange(Number(e.target.value))}
+                  className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+                <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
+                  <span>Vívido (15%)</span>
+                  <span>Equilibrado (60%)</span>
+                  <span>Oscuro (95%)</span>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <button

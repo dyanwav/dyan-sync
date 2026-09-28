@@ -34,6 +34,7 @@ export type ThemeConfig = {
   lookaheadMs: number;
   customImageDataUrl?: string;
   customImageBlobId?: string;
+  contrast?: number; // 0 to 100, default 60
 };
 
 export type ProjectMeta = {

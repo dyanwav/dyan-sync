@@ -1,7 +1,9 @@
 import { useProjectStore } from '@/features/project/store';
 import { exportLrc, downloadLrc, exportVideo, downloadVideoBlob, getDecodedAudio } from '@/features/export';
 import { useAudioEngine } from '@/features/audio';
+import { loadBlob } from '@/features/project/services/db';
 import { Button } from '@/shared/ui/button';
+import { Slider } from '@/shared/ui/slider';
 import { 
   Download, 
   Copy, 
@@ -15,7 +17,9 @@ import {
   AlertCircle, 
   X, 
   RefreshCw, 
-  Film
+  Film,
+  Play,
+  Pause
 } from 'lucide-react';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from '@/features/i18n';
@@ -100,6 +104,67 @@ export function ExportScreen() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Audio preview playback for selected export range
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
+
+  // Auto-load audio into engine if not loaded (e.g. direct reload on export view)
+  useEffect(() => {
+    if (!audio.state.isLoaded && project?.audio?.blobId) {
+      loadBlob(project.audio.blobId).then((blob) => {
+        if (blob) {
+          audio.loadAudio(blob).catch((err) => console.warn('Could not auto-load audio for preview:', err));
+        }
+      });
+    }
+  }, [audio.state.isLoaded, project?.audio?.blobId]);
+
+  const handleTogglePreviewAudio = () => {
+    if (isPreviewPlaying) {
+      audio.pause();
+      setIsPreviewPlaying(false);
+    } else {
+      audio.engine.seek(exportStart);
+      audio.play();
+      setIsPreviewPlaying(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!isPreviewPlaying) return;
+
+    let animId: number;
+    const checkSnippet = () => {
+      const current = audio.engine.getCurrentTime();
+      if (current >= exportEnd || !audio.engine.clock.isPlaying) {
+        audio.pause();
+        audio.engine.seek(exportStart);
+        setIsPreviewPlaying(false);
+        return;
+      }
+      animId = requestAnimationFrame(checkSnippet);
+    };
+
+    animId = requestAnimationFrame(checkSnippet);
+    return () => cancelAnimationFrame(animId);
+  }, [isPreviewPlaying, exportStart, exportEnd, audio]);
+
+  // Stop preview if range changes
+  useEffect(() => {
+    if (isPreviewPlaying) {
+      audio.pause();
+      setIsPreviewPlaying(false);
+    }
+  }, [rangeType, customStart, customEnd]);
+
+  // Cleanup audio preview on unmount
+  useEffect(() => {
+    return () => {
+      if (audio.engine.clock.isPlaying) {
+        audio.pause();
+      }
+    };
+  }, [audio]);
+
   // Clean up Object URL
   useEffect(() => {
     return () => {
@@ -129,6 +194,11 @@ export function ExportScreen() {
 
   const handleGenerateVideo = async () => {
     if (!project) return;
+
+    if (isPreviewPlaying) {
+      audio.pause();
+      setIsPreviewPlaying(false);
+    }
 
     if (exportedVideoUrl) {
       URL.revokeObjectURL(exportedVideoUrl);
@@ -302,14 +372,41 @@ export function ExportScreen() {
           <div className="lg:col-span-7 space-y-6">
             {/* Range Selector Card */}
             <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-6 backdrop-blur-xl space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
                   <Clock className="w-4 h-4 text-blue-400" />
                   {t('export.timeRange')}
                 </h3>
-                <span className="text-xs font-mono text-zinc-400 bg-zinc-950/60 px-2.5 py-1 rounded-md border border-zinc-800">
-                  {formatTime(exportStart)} - {formatTime(exportEnd)} ({Math.round(exportEnd - exportStart)}s)
-                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTogglePreviewAudio}
+                    className={cn(
+                      "h-7 px-2.5 text-[11px] font-semibold rounded-lg cursor-pointer transition-all",
+                      isPreviewPlaying
+                        ? "bg-blue-600 text-white border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)] animate-pulse"
+                        : "bg-zinc-950 hover:bg-zinc-800 text-zinc-300 border-zinc-800 hover:text-white"
+                    )}
+                    title={isPreviewPlaying ? "Pausar preescucha" : "Escuchar fragmento seleccionado"}
+                  >
+                    {isPreviewPlaying ? (
+                      <>
+                        <Pause className="w-3 h-3 mr-1 text-white fill-white" />
+                        <span>Pausar</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3 h-3 mr-1 text-blue-400 fill-blue-400" />
+                        <span>Escuchar selección</span>
+                      </>
+                    )}
+                  </Button>
+                  <span className="text-xs font-mono text-zinc-300 bg-zinc-950/70 px-2.5 py-1 rounded-md border border-zinc-800">
+                    {formatTime(exportStart)} - {formatTime(exportEnd)} ({Math.round(exportEnd - exportStart)}s)
+                  </span>
+                </div>
               </div>
 
               {/* Range Presets */}
@@ -338,36 +435,104 @@ export function ExportScreen() {
 
               {/* Custom Range Sliders / Inputs */}
               {rangeType === 'custom' && (
-                <div className="grid grid-cols-2 gap-4 pt-3 border-t border-zinc-800/60">
-                  <div>
-                    <label className="text-xs font-medium text-zinc-400 block mb-1.5">{t('export.startTime')}</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={0}
-                        max={Math.max(0, customEnd - 1)}
-                        step={1}
-                        value={Math.round(customStart)}
-                        onChange={(e) => setCustomStart(Math.max(0, parseFloat(e.target.value) || 0))}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 font-mono focus:outline-none focus:border-blue-500"
-                      />
-                      <span className="text-xs font-mono text-zinc-500">{formatTime(customStart)}</span>
+                <div className="pt-4 border-t border-zinc-800/60 space-y-4">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-zinc-300 flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-blue-400" />
+                      Rango Personalizado (Doble Control)
+                    </span>
+                    <span className="font-mono text-blue-400 font-bold bg-blue-950/40 border border-blue-800/40 px-2 py-0.5 rounded">
+                      {formatTime(customStart)} → {formatTime(customEnd)} ({((customEnd - customStart)).toFixed(1)}s)
+                    </span>
+                  </div>
+
+                  {/* Dual-Thumb Range Slider */}
+                  <div className="p-4 bg-zinc-950/60 rounded-xl border border-zinc-800/80 space-y-3">
+                    <Slider
+                      value={[customStart, customEnd]}
+                      min={0}
+                      max={totalDuration}
+                      step={0.5}
+                      minStepsBetweenThumbs={1}
+                      onValueChange={([start, end]) => {
+                        const s = Math.max(0, Math.min(start, totalDuration - 0.5));
+                        const e = Math.max(s + 0.5, Math.min(end, totalDuration));
+                        setCustomStart(s);
+                        setCustomEnd(e);
+                      }}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between items-center text-[11px] font-mono text-zinc-500 px-1">
+                      <span>00:00</span>
+                      <span className="text-zinc-400 text-center">
+                        Desliza el botón izquierdo para el inicio y el derecho para el final
+                      </span>
+                      <span>{formatTime(totalDuration)}</span>
                     </div>
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-zinc-400 block mb-1.5">{t('export.endTime')}</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={customStart + 1}
-                        max={totalDuration}
-                        step={1}
-                        value={Math.round(customEnd)}
-                        onChange={(e) => setCustomEnd(Math.min(totalDuration, parseFloat(e.target.value) || totalDuration))}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 font-mono focus:outline-none focus:border-blue-500"
-                      />
-                      <span className="text-xs font-mono text-zinc-500">{formatTime(customEnd)}</span>
+
+                  {/* Range Detail Inputs & Listen Snippet Action */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 bg-zinc-950 px-2.5 py-1.5 rounded-lg border border-zinc-800">
+                        <span className="text-[11px] text-zinc-400 font-medium">Inicio:</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={Math.max(0, customEnd - 0.5)}
+                          step={0.5}
+                          value={Number(customStart.toFixed(1))}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0;
+                            setCustomStart(Math.max(0, Math.min(val, customEnd - 0.5)));
+                          }}
+                          className="w-16 bg-transparent text-xs text-zinc-100 font-mono focus:outline-none text-right"
+                        />
+                        <span className="text-[11px] font-mono text-zinc-500">s</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 bg-zinc-950 px-2.5 py-1.5 rounded-lg border border-zinc-800">
+                        <span className="text-[11px] text-zinc-400 font-medium">Fin:</span>
+                        <input
+                          type="number"
+                          min={customStart + 0.5}
+                          max={totalDuration}
+                          step={0.5}
+                          value={Number(customEnd.toFixed(1))}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || totalDuration;
+                            setCustomEnd(Math.min(totalDuration, Math.max(customStart + 0.5, val)));
+                          }}
+                          className="w-16 bg-transparent text-xs text-zinc-100 font-mono focus:outline-none text-right"
+                        />
+                        <span className="text-[11px] font-mono text-zinc-500">s</span>
+                      </div>
                     </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleTogglePreviewAudio}
+                      className={cn(
+                        "h-8 px-3 text-xs font-semibold rounded-lg cursor-pointer transition-all",
+                        isPreviewPlaying
+                          ? "bg-blue-600 text-white border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)] animate-pulse"
+                          : "bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border-zinc-800 hover:text-white"
+                      )}
+                    >
+                      {isPreviewPlaying ? (
+                        <>
+                          <Pause className="w-3.5 h-3.5 mr-1.5 text-white fill-white" />
+                          <span>Pausar escucha</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-3.5 h-3.5 mr-1.5 text-blue-400 fill-blue-400" />
+                          <span>Escuchar selección ({formatTime(customStart)} - {formatTime(customEnd)})</span>
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
               )}

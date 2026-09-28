@@ -437,7 +437,8 @@ export async function exportVideo(
   let background: ImageBitmap;
   if (project.settings.theme.preset === 'custom' && project.settings.theme.customImageDataUrl) {
     try {
-      background = await createCustomPhotoBackground(project.settings.theme.customImageDataUrl, width, height);
+      const contrast = project.settings.theme.contrast ?? 60;
+      background = await createCustomPhotoBackground(project.settings.theme.customImageDataUrl, width, height, contrast);
     } catch {
       const presetId = 'dark';
       const preset = GRADIENT_PRESETS.find((p) => p.id === presetId) || GRADIENT_PRESETS[0];

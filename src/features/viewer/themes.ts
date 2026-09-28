@@ -161,7 +161,8 @@ export function createGradientBackground(
 export async function createCustomPhotoBackground(
   imageSource: string | ImageBitmap | HTMLImageElement,
   width: number,
-  height: number
+  height: number,
+  contrast: number = 60
 ): Promise<ImageBitmap> {
   // 1. Load HTMLImageElement or use existing ImageBitmap
   let imgElement: HTMLImageElement | ImageBitmap;
@@ -203,18 +204,21 @@ export async function createCustomPhotoBackground(
   // Draw user image centered & cover-fitted
   ctx.drawImage(imgElement, dx, dy, drawW, drawH);
 
-  // 3. Multi-layer Darkening & Contrast Overlay:
-  // Layer A: Base Darkening Tint (0.64 alpha)
-  ctx.fillStyle = 'rgba(9, 9, 11, 0.64)';
+  // 3. Multi-layer Darkening & Contrast Overlay (Scaled by user contrast setting 10..100)
+  const factor = Math.max(0.1, Math.min(1.0, contrast / 100));
+
+  // Layer A: Base Darkening Tint
+  const baseAlpha = Math.min(0.95, 0.22 + factor * 0.55);
+  ctx.fillStyle = `rgba(9, 9, 11, ${baseAlpha.toFixed(2)})`;
   ctx.fillRect(0, 0, width, height);
 
   // Layer B: Vertical Readability Gradient
   const lyricOverlay = ctx.createLinearGradient(0, 0, 0, height);
-  lyricOverlay.addColorStop(0, 'rgba(0, 0, 0, 0.78)');
-  lyricOverlay.addColorStop(0.2, 'rgba(0, 0, 0, 0.45)');
-  lyricOverlay.addColorStop(0.38, 'rgba(0, 0, 0, 0.35)'); // Sweet spot for active line
-  lyricOverlay.addColorStop(0.65, 'rgba(0, 0, 0, 0.55)');
-  lyricOverlay.addColorStop(1, 'rgba(0, 0, 0, 0.88)');
+  lyricOverlay.addColorStop(0, `rgba(0, 0, 0, ${(0.45 + factor * 0.45).toFixed(2)})`);
+  lyricOverlay.addColorStop(0.2, `rgba(0, 0, 0, ${(0.2 + factor * 0.4).toFixed(2)})`);
+  lyricOverlay.addColorStop(0.38, `rgba(0, 0, 0, ${(0.15 + factor * 0.35).toFixed(2)})`);
+  lyricOverlay.addColorStop(0.65, `rgba(0, 0, 0, ${(0.3 + factor * 0.45).toFixed(2)})`);
+  lyricOverlay.addColorStop(1, `rgba(0, 0, 0, ${(0.55 + factor * 0.4).toFixed(2)})`);
   ctx.fillStyle = lyricOverlay;
   ctx.fillRect(0, 0, width, height);
 
@@ -225,8 +229,8 @@ export async function createCustomPhotoBackground(
     width * 0.5, height * 0.38,
     width * 0.55
   );
-  readingGlow.addColorStop(0, 'rgba(0, 0, 0, 0.45)');
-  readingGlow.addColorStop(0.6, 'rgba(0, 0, 0, 0.2)');
+  readingGlow.addColorStop(0, `rgba(0, 0, 0, ${(0.2 + factor * 0.4).toFixed(2)})`);
+  readingGlow.addColorStop(0.6, `rgba(0, 0, 0, ${(0.1 + factor * 0.2).toFixed(2)})`);
   readingGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = readingGlow;
   ctx.fillRect(0, 0, width, height);
@@ -239,8 +243,8 @@ export async function createCustomPhotoBackground(
     height * 0.76
   );
   vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  vignette.addColorStop(0.55, 'rgba(0, 0, 0, 0.4)');
-  vignette.addColorStop(1, 'rgba(0, 0, 0, 0.88)');
+  vignette.addColorStop(0.55, `rgba(0, 0, 0, ${(0.2 + factor * 0.35).toFixed(2)})`);
+  vignette.addColorStop(1, `rgba(0, 0, 0, ${(0.55 + factor * 0.4).toFixed(2)})`);
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, width, height);
 

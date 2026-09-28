@@ -8,9 +8,11 @@ export interface ProjectState {
   
   // UI State
   view: ViewState;
+  hasAcceptedLegal: boolean;
   
   // Actions
   setProject: (project: Project | null) => void;
+  acceptLegal: () => void;
   updateLine: (id: string, updates: Partial<LyricLine>) => void;
   updateLines: (updates: Array<{ id: string; changes: Partial<LyricLine> }>) => void;
   setLineTiming: (id: string, start: number) => void;
@@ -28,6 +30,14 @@ export const useProjectStore = create<ProjectState>()(
   immer((set) => ({
     project: null,
     view: 'home',
+    hasAcceptedLegal: localStorage.getItem('lyricsync_legal_accepted') === 'true',
+
+    acceptLegal: () => {
+      localStorage.setItem('lyricsync_legal_accepted', 'true');
+      set((state) => {
+        state.hasAcceptedLegal = true;
+      });
+    },
 
     setProject: (project) => set((state) => {
       state.project = project;

@@ -128,3 +128,13 @@ export const useProjectStore = create<ProjectState>()(
     }),
   }))
 );
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', (e) => {
+    const state = useProjectStore.getState();
+    if (state.project && state.view !== 'home' && state.view !== 'export') {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+}

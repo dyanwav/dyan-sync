@@ -8,10 +8,12 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Textarea } from '@/shared/ui/textarea';
 import { ArrowRight, Upload } from 'lucide-react';
+import { useTranslation } from '@/features/i18n';
 
 export function SetupScreen() {
   const { project, updateMeta, setLines, setView } = useProjectStore();
   const { state, loadAudio } = useAudioEngine();
+  const { t } = useTranslation();
   
   const [lyricsInput, setLyricsInput] = useState('');
   
@@ -44,8 +46,14 @@ export function SetupScreen() {
     reader.readAsText(file);
   };
 
+  const isReady = state.isLoaded && lyricsInput.trim().length > 0;
+
   const handleContinue = () => {
     if (!project) return;
+    if (!state.isLoaded) {
+      alert(t('setup.needAudioAndLyrics'));
+      return;
+    }
     
     // Parse lyrics and save to project
     const lines = parseLyrics(lyricsInput);
@@ -53,8 +61,6 @@ export function SetupScreen() {
     
     setView('sync');
   };
-
-  const isReady = state.isLoaded && lyricsInput.trim().length > 0;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pt-6">
@@ -64,7 +70,7 @@ export function SetupScreen() {
           <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/60 p-6 backdrop-blur-xl flex flex-col h-full">
             <h2 className="text-xl font-semibold text-zinc-100 flex items-center mb-4">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/20 text-blue-400 text-sm mr-2">1</span>
-              Audio Track
+              {t('setup.uploadAudio')}
             </h2>
             <div className="flex-1 flex flex-col justify-center">
               <AudioDropzone onLoad={handleAudioLoad} />
@@ -77,24 +83,24 @@ export function SetupScreen() {
           <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/60 p-6 backdrop-blur-xl">
             <h2 className="text-xl font-semibold text-zinc-100 flex items-center mb-4">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/20 text-blue-400 text-sm mr-2">2</span>
-              Track Metadata
+              {t('setup.metadata')}
             </h2>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Song Title</Label>
+                <Label htmlFor="title">{t('setup.title_field')}</Label>
                 <Input 
                   id="title"
-                  placeholder="e.g. Bohemian Rhapsody" 
+                  placeholder="" 
                   value={project?.meta.title || ''}
                   onChange={(e) => updateMeta({ title: e.target.value })}
                   className="bg-zinc-950/50 border-zinc-800"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="artist">Artist</Label>
+                <Label htmlFor="artist">{t('setup.artist')}</Label>
                 <Input 
                   id="artist"
-                  placeholder="e.g. Queen" 
+                  placeholder="" 
                   value={project?.meta.artist || ''}
                   onChange={(e) => updateMeta({ artist: e.target.value })}
                   className="bg-zinc-950/50 border-zinc-800"
@@ -107,7 +113,7 @@ export function SetupScreen() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-zinc-100 flex items-center">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/20 text-blue-400 text-sm mr-2">3</span>
-                Lyrics
+                {t('setup.lyrics')}
               </h2>
               <div>
                 <input 
@@ -122,13 +128,13 @@ export function SetupScreen() {
                   className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-zinc-800 hover:bg-zinc-800 hover:text-zinc-100 h-9 px-3"
                 >
                   <Upload className="mr-2 h-4 w-4" />
-                  Import File
+                  {t('setup.importLrc')}
                 </Label>
               </div>
             </div>
             
             <Textarea
-              placeholder="Paste your lyrics here...&#10;&#10;One line per line of the song.&#10;Empty lines will be treated as instrumental breaks."
+              placeholder={t('setup.lyricsPlaceholder')}
               className="flex-1 min-h-[200px] resize-y bg-zinc-950/50 border-zinc-800 font-mono text-sm"
               value={lyricsInput}
               onChange={(e) => setLyricsInput(e.target.value)}
@@ -138,15 +144,20 @@ export function SetupScreen() {
       </div>
 
       <div className="flex justify-end pt-4 border-t border-zinc-800/80">
-        <Button 
-          size="lg"
-          onClick={handleContinue}
-          disabled={!isReady}
-          className="bg-blue-600 hover:bg-blue-500 text-white min-w-[200px]"
-        >
-          Continue to Sync
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
+        <div className="flex flex-col items-end">
+          {!isReady && (
+            <span className="text-sm text-amber-500/80 mb-2">{t('setup.needAudioAndLyrics')}</span>
+          )}
+          <Button 
+            size="lg"
+            onClick={handleContinue}
+            disabled={!isReady}
+            className="bg-blue-600 hover:bg-blue-500 text-white min-w-[200px]"
+          >
+            {t('setup.continueToSync')}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -1,19 +1,21 @@
 import { Check } from 'lucide-react';
 import { cn } from '@/shared/utils/cn';
 import type { ViewState } from '@/features/project/types';
+import { useTranslation } from '@/features/i18n';
 
 interface StepIndicatorProps {
   currentView: ViewState;
 }
 
-const STEPS: { id: ViewState; label: string }[] = [
-  { id: 'setup', label: 'Setup' },
-  { id: 'sync', label: 'Sync' },
-  { id: 'preview', label: 'Preview' },
-  { id: 'export', label: 'Export' },
+const STEPS: { id: ViewState; key: string }[] = [
+  { id: 'setup', key: 'nav.setup' },
+  { id: 'sync', key: 'nav.sync' },
+  { id: 'preview', key: 'nav.preview' },
+  { id: 'export', key: 'nav.export' },
 ];
 
 export function StepIndicator({ currentView }: StepIndicatorProps) {
+  const { t } = useTranslation();
   if (currentView === 'home') return null;
 
   const currentIndex = STEPS.findIndex(s => s.id === currentView);
@@ -45,7 +47,7 @@ export function StepIndicator({ currentView }: StepIndicatorProps) {
                 isUpcoming && "opacity-50"
               )}
             >
-              {step.label}
+              {t(step.key)}
             </span>
             {index < STEPS.length - 1 && (
               <div

@@ -1,10 +1,12 @@
 import { useProjectStore } from '@/features/project/store';
 import { Button } from '@/shared/ui/button';
 import { Plus, Music, Clock, Trash2, ChevronRight } from 'lucide-react';
+import { useTranslation } from '@/features/i18n';
 
 export function HomeScreen() {
   const setProject = useProjectStore((s) => s.setProject);
   const setView = useProjectStore((s) => s.setView);
+  const { t } = useTranslation();
   
   // In a real app, this would come from a database or localStorage listing
   // For now we don't have persistence implemented for multiple projects in the requirements
@@ -39,10 +41,10 @@ export function HomeScreen() {
     <div className="flex flex-col items-center pt-16 md:pt-24 max-w-4xl mx-auto space-y-12">
       <div className="text-center space-y-4">
         <h1 className="text-4xl md:text-6xl font-bold tracking-tighter bg-gradient-to-br from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent drop-shadow-sm">
-          LyricSync Studio
+          {t('app.name')}
         </h1>
         <p className="text-lg text-zinc-400 max-w-lg mx-auto">
-          Create perfectly timed LRC files for your music. Tap to sync, preview instantly, and export.
+          {t('app.tagline')}
         </p>
       </div>
 
@@ -52,20 +54,20 @@ export function HomeScreen() {
         className="h-14 px-8 text-lg bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:shadow-[0_0_30px_rgba(59,130,246,0.6)] transition-all duration-300"
       >
         <Plus className="mr-2 h-5 w-5" />
-        New Project
+        {t('home.newProject')}
       </Button>
 
       <div className="w-full mt-12 space-y-6">
         <h2 className="text-xl font-medium text-zinc-100 border-b border-zinc-800 pb-2">
-          Recent Projects
+          {t('home.recentProjects')}
         </h2>
 
         {recentProjects.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4 rounded-xl border border-zinc-800/50 bg-zinc-900/30 backdrop-blur-sm border-dashed">
             <Music className="h-12 w-12 text-zinc-700 mb-4" />
-            <p className="text-zinc-400 text-center">No recent projects found.</p>
+            <p className="text-zinc-400 text-center">{t('home.noProjects')}</p>
             <p className="text-sm text-zinc-600 text-center mt-1">
-              Create a new project to get started.
+              {t('home.noProjectsDescription')}
             </p>
           </div>
         ) : (

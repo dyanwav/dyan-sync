@@ -3,10 +3,12 @@ import { exportLrc, downloadLrc } from '@/features/export';
 import { Button } from '@/shared/ui/button';
 import { Download, Copy, CheckCircle2, ChevronLeft, FileText, Video } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { useTranslation } from '@/features/i18n';
 
 export function ExportScreen() {
   const { project, setView } = useProjectStore();
   const [copied, setCopied] = useState(false);
+  const { t } = useTranslation();
 
   const lrcContent = useMemo(() => {
     if (!project) return '';
@@ -29,8 +31,8 @@ export function ExportScreen() {
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pt-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-zinc-100">Export Project</h2>
-          <p className="text-zinc-400 mt-1">Download your synced lyrics or export as video.</p>
+          <h2 className="text-2xl font-bold text-zinc-100">{t('export.title')}</h2>
+          <p className="text-zinc-400 mt-1">{t('export.lrcDescription')}</p>
         </div>
       </div>
 
@@ -41,7 +43,7 @@ export function ExportScreen() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium text-zinc-100 flex items-center">
                 <FileText className="mr-2 h-5 w-5 text-blue-400" />
-                LRC File Preview
+                {t('export.preview')}
               </h3>
               <div className="flex gap-2">
                 <Button 
@@ -51,9 +53,9 @@ export function ExportScreen() {
                   className="bg-zinc-950/50 border-zinc-800"
                 >
                   {copied ? (
-                    <><CheckCircle2 className="mr-2 h-4 w-4 text-green-500" /> Copied!</>
+                    <><CheckCircle2 className="mr-2 h-4 w-4 text-green-500" /> {t('export.copied')}</>
                   ) : (
-                    <><Copy className="mr-2 h-4 w-4" /> Copy</>
+                    <><Copy className="mr-2 h-4 w-4" /> {t('export.copyLrc')}</>
                   )}
                 </Button>
               </div>
@@ -68,7 +70,7 @@ export function ExportScreen() {
         {/* Sidebar Actions */}
         <div className="space-y-6">
           <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/60 p-6 backdrop-blur-xl">
-            <h3 className="text-lg font-medium text-zinc-100 mb-4">Export Options</h3>
+            <h3 className="text-lg font-medium text-zinc-100 mb-4">{t('export.lrcExport')}</h3>
             
             <div className="space-y-4">
               <Button 
@@ -76,7 +78,7 @@ export function ExportScreen() {
                 className="w-full bg-blue-600 hover:bg-blue-500 text-white h-12 shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] transition-all"
               >
                 <Download className="mr-2 h-5 w-5" />
-                Download .LRC File
+                {t('export.download')}
               </Button>
               
               <div className="relative">
@@ -94,7 +96,7 @@ export function ExportScreen() {
                 className="w-full h-12 bg-zinc-950/50 border-zinc-800 text-zinc-500"
               >
                 <Video className="mr-2 h-5 w-5" />
-                Export Video (Pro)
+                {t('export.videoExport')}
               </Button>
             </div>
           </div>
@@ -132,7 +134,7 @@ export function ExportScreen() {
           className="text-zinc-400 hover:text-zinc-100"
         >
           <ChevronLeft className="mr-2 h-4 w-4" />
-          Back to Preview
+          {t('export.backToPreview')}
         </Button>
       </div>
     </div>

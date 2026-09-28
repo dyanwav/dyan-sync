@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useProjectStore } from '@/features/project/store';
 import { useSyncStore } from '@/features/sync';
 import { useAudioEngine } from '@/features/audio';
@@ -7,11 +7,13 @@ import { TransportControls } from '@/features/audio';
 import { CanvasPreview } from '@/features/viewer';
 import { Button } from '@/shared/ui/button';
 import { ArrowRight, Settings2 } from 'lucide-react';
+import { useTranslation } from '@/features/i18n';
 
 export function SyncScreen() {
   const { project, setView } = useProjectStore();
   const { mode } = useSyncStore();
   const audio = useAudioEngine();
+  const { t } = useTranslation();
   
   const [showCalibration, setShowCalibration] = useState(false);
 
@@ -27,6 +29,19 @@ export function SyncScreen() {
     lineHeight: 1.5,
     lookaheadMs: 2000,
   };
+
+  useEffect(() => {
+    if (mode === 'syncing' && audio.state.playbackState !== 'playing' && audio.state.duration > 0) {
+      if (audio.engine.clock.currentTime >= audio.state.duration - 0.2) {
+        const { lines, currentLineIndex, setLines, finishSync } = useSyncStore.getState();
+        if (currentLineIndex < lines.length) {
+          const newLines = lines.map((l, i) => i >= currentLineIndex ? { ...l, status: 'unassigned' as const } : l);
+          setLines(newLines);
+        }
+        finishSync();
+      }
+    }
+  }, [audio.state.playbackState, mode, audio.state.duration]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] animate-in fade-in duration-500 pt-4">
@@ -45,14 +60,14 @@ export function SyncScreen() {
             className="absolute top-4 right-4 bg-zinc-950/80 border-zinc-800 text-zinc-400 hover:text-zinc-100 z-10"
           >
             <Settings2 className="mr-2 h-4 w-4" />
-            Calibrate
+            {t('sync.calibrate')}
           </Button>
         </div>
 
         {/* Right Panel: Preview & Info */}
         <div className="flex-[2] flex flex-col gap-4 min-h-0">
           <div className="flex-1 rounded-xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl p-4 flex flex-col">
-            <h3 className="text-sm font-medium text-zinc-400 mb-4">Preview</h3>
+            <h3 className="text-sm font-medium text-zinc-400 mb-4">{t('preview.title')}</h3>
             <div className="flex-1 rounded-lg overflow-hidden border border-zinc-800/50 relative bg-black flex items-center justify-center">
               <CanvasPreview 
                 scene={scene} 
@@ -66,9 +81,9 @@ export function SyncScreen() {
           <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl p-4">
             <h3 className="text-sm font-medium text-zinc-400 mb-2">Instructions</h3>
             <ul className="text-sm text-zinc-300 space-y-2">
-              <li><kbd className="px-2 py-1 bg-zinc-800 rounded text-zinc-100 text-xs font-mono">Space</kbd> Tap on the beat</li>
-              <li><kbd className="px-2 py-1 bg-zinc-800 rounded text-zinc-100 text-xs font-mono">Backspace</kbd> Undo last tap</li>
-              <li><kbd className="px-2 py-1 bg-zinc-800 rounded text-zinc-100 text-xs font-mono">Esc</kbd> Pause/Resume</li>
+              <li><kbd className="px-2 py-1 bg-zinc-800 rounded text-zinc-100 text-xs font-mono">Space</kbd> {t('shortcuts.space')}</li>
+              <li><kbd className="px-2 py-1 bg-zinc-800 rounded text-zinc-100 text-xs font-mono">Backspace</kbd> {t('shortcuts.backspace')}</li>
+              <li><kbd className="px-2 py-1 bg-zinc-800 rounded text-zinc-100 text-xs font-mono">Esc</kbd> {t('sync.pauseSync')} / {t('sync.resumeSync')}</li>
             </ul>
           </div>
         </div>
@@ -90,7 +105,7 @@ export function SyncScreen() {
             disabled={mode === 'syncing' || mode === 'countdown'}
             className="bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
           >
-            Review & Export
+            {t('sync.continueToPreview')}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>

@@ -1,0 +1,127 @@
+{
+  "app": {
+    "name": "LyricSync Studio",
+    "tagline": "Sync your lyrics. Create stunning visuals.",
+    "taglineAlt": "Synchronize lyrics to music with precision"
+  },
+  "nav": {
+    "home": "Home",
+    "setup": "Setup",
+    "sync": "Sync",
+    "preview": "Preview",
+    "export": "Export",
+    "back": "Back",
+    "shortcuts": "Keyboard Shortcuts"
+  },
+  "home": {
+    "newProject": "New Project",
+    "recentProjects": "Recent Projects",
+    "noProjects": "No projects yet",
+    "noProjectsDescription": "Create your first project to start syncing lyrics to music.",
+    "deleteProject": "Delete Project",
+    "deleteConfirm": "Are you sure you want to delete this project?",
+    "lastEdited": "Last edited",
+    "linesSync": "lines synced"
+  },
+  "setup": {
+    "title": "Project Setup",
+    "uploadAudio": "Upload Audio",
+    "uploadAudioDesc": "Drag and drop or click to upload an audio file",
+    "supportedFormats": "Supported: MP3, WAV, AAC, FLAC, OGG, M4A",
+    "lyrics": "Lyrics",
+    "lyricsPlaceholder": "Paste your lyrics here...\n\n[Verse 1]\nFirst line of the verse\nSecond line of the verse\n\n[Chorus]\nChorus lyrics here",
+    "importLrc": "Import .lrc",
+    "metadata": "Metadata",
+    "title_field": "Title",
+    "artist": "Artist",
+    "continueToSync": "Continue to Sync",
+    "needAudioAndLyrics": "Upload audio and add lyrics to continue"
+  },
+  "sync": {
+    "title": "Sync Lyrics",
+    "startSync": "Start Sync",
+    "pauseSync": "Pause",
+    "resumeSync": "Resume",
+    "finishSync": "Finish",
+    "calibrate": "Calibrate",
+    "recalibrate": "Recalibrate",
+    "progress": "{{synced}} of {{total}} lines synced",
+    "pending": "Pending",
+    "synced": "Synced",
+    "unassigned": "Skipped",
+    "mode": {
+      "idle": "Ready to sync",
+      "countdown": "Starting...",
+      "syncing": "Syncing — tap Space for each line",
+      "paused": "Paused",
+      "done": "Sync complete!"
+    },
+    "continueToPreview": "Continue to Preview"
+  },
+  "calibration": {
+    "title": "Latency Calibration",
+    "description": "Tap Space along with the metronome beat. This helps compensate for your reaction time and audio latency.",
+    "beat": "Beat {{current}} of {{total}}",
+    "result": "Calibrated offset: {{offset}}ms",
+    "accept": "Accept",
+    "retry": "Try Again",
+    "cancel": "Cancel",
+    "manualAdjust": "Manual Adjustment"
+  },
+  "preview": {
+    "title": "Preview",
+    "theme": "Theme",
+    "continueToExport": "Continue to Export"
+  },
+  "export": {
+    "title": "Export",
+    "lrcExport": "LRC File",
+    "lrcDescription": "Standard lyric file format compatible with music players and platforms.",
+    "download": "Download .lrc",
+    "includeSections": "Include section headers",
+    "preview": "Preview",
+    "videoExport": "Video Export",
+    "videoComingSoon": "Video export coming in Prototype 3",
+    "backToPreview": "Back to Preview",
+    "copied": "Copied to clipboard!",
+    "copyLrc": "Copy LRC"
+  },
+  "legal": {
+    "title": "Before you start",
+    "description": "LyricSync Studio processes all audio and lyrics locally in your browser. No data is sent to any server.",
+    "agreement": "By using this tool, you confirm that you have the necessary rights to the audio and lyrics you process.",
+    "accept": "I understand, let's start",
+    "privacy": "Your files never leave your browser."
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "sync": "Sync Mode",
+    "transport": "Transport",
+    "general": "General",
+    "space": "Mark line start",
+    "backspace": "Undo last mark",
+    "b": "Mark silence/instrumental",
+    "s": "Skip line",
+    "k": "Play / Pause",
+    "j": "Seek -3 seconds",
+    "l": "Seek +3 seconds",
+    "question": "Toggle shortcuts panel",
+    "arrows": "Seek ±3 seconds"
+  },
+  "storage": {
+    "warning": "Storage Warning",
+    "description": "Your browser's storage may be limited. We recommend exporting a backup to avoid losing your work.",
+    "exportBackup": "Export Backup",
+    "dismiss": "Dismiss"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "close": "Close",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry"
+  }
+}

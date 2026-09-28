@@ -1,0 +1,127 @@
+{
+  "app": {
+    "name": "LyricSync Studio",
+    "tagline": "Sincroniza tus letras. Crea visuales asombrosos.",
+    "taglineAlt": "Sincroniza letras con música con precisión"
+  },
+  "nav": {
+    "home": "Inicio",
+    "setup": "Configuración",
+    "sync": "Sincronizar",
+    "preview": "Vista previa",
+    "export": "Exportar",
+    "back": "Atrás",
+    "shortcuts": "Atajos de teclado"
+  },
+  "home": {
+    "newProject": "Nuevo proyecto",
+    "recentProjects": "Proyectos recientes",
+    "noProjects": "Aún no hay proyectos",
+    "noProjectsDescription": "Crea tu primer proyecto para empezar a sincronizar letras con música.",
+    "deleteProject": "Eliminar proyecto",
+    "deleteConfirm": "¿Estás seguro de que quieres eliminar este proyecto?",
+    "lastEdited": "Última edición",
+    "linesSync": "líneas sincronizadas"
+  },
+  "setup": {
+    "title": "Configuración del proyecto",
+    "uploadAudio": "Subir audio",
+    "uploadAudioDesc": "Arrastra y suelta o haz clic para subir un archivo de audio",
+    "supportedFormats": "Soportados: MP3, WAV, AAC, FLAC, OGG, M4A",
+    "lyrics": "Letra",
+    "lyricsPlaceholder": "Pega tu letra aquí...\n\n[Verse 1]\nPrimera línea del verso\nSegunda línea del verso\n\n[Chorus]\nLetra del coro aquí",
+    "importLrc": "Importar .lrc",
+    "metadata": "Metadatos",
+    "title_field": "Título",
+    "artist": "Artista",
+    "continueToSync": "Continuar a Sincronizar",
+    "needAudioAndLyrics": "Sube el audio y añade la letra para continuar"
+  },
+  "sync": {
+    "title": "Sincronizar letras",
+    "startSync": "Empezar",
+    "pauseSync": "Pausar",
+    "resumeSync": "Reanudar",
+    "finishSync": "Terminar",
+    "calibrate": "Calibrar",
+    "recalibrate": "Recalibrar",
+    "progress": "{{synced}} de {{total}} líneas sincronizadas",
+    "pending": "Pendientes",
+    "synced": "Sincronizadas",
+    "unassigned": "Omitidas",
+    "mode": {
+      "idle": "Listo para sincronizar",
+      "countdown": "Empezando...",
+      "syncing": "Sincronizando — pulsa Espacio por cada línea",
+      "paused": "Pausado",
+      "done": "¡Sincronización completa!"
+    },
+    "continueToPreview": "Continuar a Vista previa"
+  },
+  "calibration": {
+    "title": "Calibración de latencia",
+    "description": "Pulsa Espacio junto con el ritmo del metrónomo. Esto ayuda a compensar tu tiempo de reacción y la latencia del audio.",
+    "beat": "Golpe {{current}} de {{total}}",
+    "result": "Desfase calibrado: {{offset}}ms",
+    "accept": "Aceptar",
+    "retry": "Intentar de nuevo",
+    "cancel": "Cancelar",
+    "manualAdjust": "Ajuste manual"
+  },
+  "preview": {
+    "title": "Vista previa",
+    "theme": "Tema",
+    "continueToExport": "Continuar a Exportar"
+  },
+  "export": {
+    "title": "Exportar",
+    "lrcExport": "Archivo LRC",
+    "lrcDescription": "Formato estándar de letras compatible con reproductores de música y plataformas.",
+    "download": "Descargar .lrc",
+    "includeSections": "Incluir cabeceras de sección",
+    "preview": "Vista previa",
+    "videoExport": "Exportar video",
+    "videoComingSoon": "La exportación de video llegará en el Prototipo 3",
+    "backToPreview": "Volver a Vista previa",
+    "copied": "¡Copiado al portapapeles!",
+    "copyLrc": "Copiar LRC"
+  },
+  "legal": {
+    "title": "Antes de empezar",
+    "description": "LyricSync Studio procesa todo el audio y las letras localmente en tu navegador. No se envía ningún dato a ningún servidor.",
+    "agreement": "Al usar esta herramienta, confirmas que tienes los derechos necesarios sobre el audio y las letras que procesas.",
+    "accept": "Entiendo, empecemos",
+    "privacy": "Tus archivos nunca salen de tu navegador."
+  },
+  "shortcuts": {
+    "title": "Atajos de teclado",
+    "sync": "Modo de sincronización",
+    "transport": "Reproducción",
+    "general": "General",
+    "space": "Marcar inicio de línea",
+    "backspace": "Deshacer última marca",
+    "b": "Marcar silencio/instrumental",
+    "s": "Omitir línea",
+    "k": "Reproducir / Pausar",
+    "j": "Retroceder 3 segundos",
+    "l": "Avanzar 3 segundos",
+    "question": "Alternar panel de atajos",
+    "arrows": "Avanzar/retroceder 3 segundos"
+  },
+  "storage": {
+    "warning": "Advertencia de almacenamiento",
+    "description": "El almacenamiento de tu navegador podría ser limitado. Recomendamos exportar una copia de seguridad para evitar perder tu trabajo.",
+    "exportBackup": "Exportar copia de seguridad",
+    "dismiss": "Descartar"
+  },
+  "common": {
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "confirm": "Confirmar",
+    "close": "Cerrar",
+    "loading": "Cargando...",
+    "error": "Ocurrió un error",
+    "retry": "Reintentar"
+  }
+}

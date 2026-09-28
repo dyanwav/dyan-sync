@@ -4,11 +4,13 @@ import { Button } from '@/shared/ui/button';
 import { ArrowLeft, Keyboard } from 'lucide-react';
 import { KeyboardShortcutsPanel } from '@/features/sync';
 import { useState } from 'react';
+import { useTranslation } from '@/features/i18n';
 
 export function AppHeader() {
   const view = useProjectStore((s) => s.view);
   const setView = useProjectStore((s) => s.setView);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const { t, locale, setLocale } = useTranslation();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-xl">
@@ -29,7 +31,7 @@ export function AppHeader() {
           
           <div className="flex flex-col">
             <h1 className="font-spaceGrotesk text-lg font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 to-zinc-400">
-              LyricSync Studio
+              {t('app.name')}
             </h1>
           </div>
         </div>
@@ -43,12 +45,19 @@ export function AppHeader() {
               size="icon"
               onClick={() => setShowShortcuts(true)}
               className="text-zinc-400 hover:text-zinc-100"
-              title="Keyboard Shortcuts"
+              title={t('nav.shortcuts')}
             >
               <Keyboard className="h-5 w-5" />
             </Button>
           )}
-          {/* Add other header actions here if needed */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocale(locale === 'en' ? 'es' : 'en')}
+            className="text-zinc-400 hover:text-zinc-100 font-medium"
+          >
+            {locale === 'en' ? 'ES' : 'EN'}
+          </Button>
         </div>
       </div>
       

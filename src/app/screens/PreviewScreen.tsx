@@ -5,10 +5,12 @@ import { TransportControls } from '@/features/audio';
 import { Button } from '@/shared/ui/button';
 import { ArrowRight } from 'lucide-react';
 import type { ThemePreset } from '@/features/project/types';
+import { useTranslation } from '@/features/i18n';
 
 export function PreviewScreen() {
   const { project, setView, updateSettings } = useProjectStore();
   const audio = useAudioEngine();
+  const { t } = useTranslation();
 
   const scene = {
     lines: project?.lines || [],
@@ -45,7 +47,7 @@ export function PreviewScreen() {
         {/* Right Panel: Settings */}
         <div className="flex-[1] flex flex-col gap-4 min-h-0 min-w-[300px]">
           <div className="flex-1 rounded-xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl p-6 overflow-y-auto">
-            <h2 className="text-xl font-semibold text-zinc-100 mb-6">Appearance</h2>
+            <h2 className="text-xl font-semibold text-zinc-100 mb-6">{t('preview.theme')}</h2>
             <ThemeSelector 
               selectedThemeId={project?.settings.theme.preset || 'dark'} 
               onSelect={handleThemeSelect} 
@@ -69,7 +71,7 @@ export function PreviewScreen() {
             onClick={() => setView('export')}
             className="bg-blue-600 hover:bg-blue-500 text-white"
           >
-            Continue to Export
+            {t('preview.continueToExport')}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>

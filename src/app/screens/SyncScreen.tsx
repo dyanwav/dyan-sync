@@ -34,7 +34,7 @@ export function SyncScreen() {
     if (mode === 'paused' || mode === 'countdown') {
       audio.pause();
     }
-  }, [mode, audio]);
+  }, [mode, audio.pause]);
 
   // Detect track end to auto-finish sync
   useEffect(() => {
@@ -48,7 +48,7 @@ export function SyncScreen() {
         finishSync();
       }
     }
-  }, [audio.state.playbackState, mode, audio.state.duration, audio.engine.clock.currentTime]);
+  }, [audio.state.playbackState, mode, audio.state.duration, audio.engine]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-5.5rem)] animate-in fade-in duration-300 w-full pt-1">

@@ -57,6 +57,7 @@ export function SyncScreen() {
         <SyncView 
           onOpenCalibration={() => setShowCalibration(true)} 
           onContinueToPreview={() => setView('preview')}
+          onBackToSetup={() => setView('setup')}
         />
         <CountdownOverlay onComplete={() => audio.play()} />
       </div>

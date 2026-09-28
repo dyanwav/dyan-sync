@@ -2,6 +2,7 @@ import { Check } from 'lucide-react';
 import { cn } from '@/shared/utils/cn';
 import type { ViewState } from '@/features/project/types';
 import { useTranslation } from '@/features/i18n';
+import { useProjectStore } from '@/features/project/store';
 
 interface StepIndicatorProps {
   currentView: ViewState;
@@ -16,6 +17,9 @@ const STEPS: { id: ViewState; key: string }[] = [
 
 export function StepIndicator({ currentView }: StepIndicatorProps) {
   const { t } = useTranslation();
+  const setView = useProjectStore((s) => s.setView);
+  const project = useProjectStore((s) => s.project);
+
   if (currentView === 'home') return null;
 
   const currentIndex = STEPS.findIndex(s => s.id === currentView);
@@ -26,29 +30,42 @@ export function StepIndicator({ currentView }: StepIndicatorProps) {
         const isCompleted = index < currentIndex;
         const isCurrent = index === currentIndex;
         const isUpcoming = index > currentIndex;
+        // User can navigate to any completed step, current step, or if project has audio/lyrics
+        const isClickable = isCompleted || (isUpcoming && Boolean(project?.audio && project?.lines.length));
 
         return (
           <div key={step.id} className="flex items-center">
-            <div
+            <button
+              type="button"
+              onClick={() => isClickable && setView(step.id)}
+              disabled={!isClickable}
+              title={isClickable ? `Ir a ${t(step.key)}` : undefined}
               className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium transition-all duration-300",
-                isCompleted ? "bg-blue-600 text-white shadow-[0_0_10px_rgba(59,130,246,0.4)]" :
-                isCurrent ? "border-2 border-blue-500 bg-blue-500/10 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]" :
-                "border border-zinc-800 bg-zinc-900/50 text-zinc-500"
+                "flex items-center transition-all group focus:outline-none",
+                isClickable ? "cursor-pointer" : "cursor-default"
               )}
             >
-              {isCompleted ? <Check className="h-4 w-4" /> : index + 1}
-            </div>
-            <span
-              className={cn(
-                "ml-2 hidden text-sm font-medium transition-colors md:block",
-                isCurrent ? "text-zinc-100" :
-                isCompleted ? "text-zinc-300" : "text-zinc-600",
-                isUpcoming && "opacity-50"
-              )}
-            >
-              {t(step.key)}
-            </span>
+              <div
+                className={cn(
+                  "flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium transition-all duration-300",
+                  isCompleted ? "bg-blue-600 text-white shadow-[0_0_10px_rgba(59,130,246,0.4)] group-hover:bg-blue-500" :
+                  isCurrent ? "border-2 border-blue-500 bg-blue-500/10 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]" :
+                  "border border-zinc-800 bg-zinc-900/50 text-zinc-500 group-hover:border-zinc-700"
+                )}
+              >
+                {isCompleted ? <Check className="h-4 w-4" /> : index + 1}
+              </div>
+              <span
+                className={cn(
+                  "ml-2 hidden text-sm font-medium transition-colors md:block",
+                  isCurrent ? "text-zinc-100 font-bold" :
+                  isCompleted ? "text-zinc-300 group-hover:text-white" : "text-zinc-600",
+                  isUpcoming && !isClickable && "opacity-50"
+                )}
+              >
+                {t(step.key)}
+              </span>
+            </button>
             {index < STEPS.length - 1 && (
               <div
                 className={cn(

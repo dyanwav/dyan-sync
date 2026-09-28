@@ -10,7 +10,21 @@ export type LyricLine = {
   status: LineStatus;
 };
 
-export type ThemePreset = 'dark' | 'acid' | 'sunset' | 'cyberpunk' | 'monochrome' | 'cover';
+export type ThemePreset = 
+  | 'dark' 
+  | 'acid' 
+  | 'sunset' 
+  | 'cyberpunk' 
+  | 'golden'
+  | 'monochrome' 
+  | 'ocean' 
+  | 'tokyo' 
+  | 'cosmic' 
+  | 'blood' 
+  | 'emerald'
+  | 'amethyst'
+  | 'cover' 
+  | 'custom';
 
 export type ThemeConfig = {
   preset: ThemePreset;
@@ -18,6 +32,8 @@ export type ThemeConfig = {
   fontSize: number;
   lineSpacing: number;
   lookaheadMs: number;
+  customImageDataUrl?: string;
+  customImageBlobId?: string;
 };
 
 export type ProjectMeta = {

@@ -1,7 +1,7 @@
 import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
 import type { Project } from '@/features/project/types';
 import { loadBlob } from '@/features/project/services/db';
-import { renderFrame, GRADIENT_PRESETS, createGradientBackground } from '@/features/viewer';
+import { renderFrame, GRADIENT_PRESETS, createGradientBackground, createCustomPhotoBackground } from '@/features/viewer';
 import type { RenderScene } from '@/features/viewer/types';
 
 export interface VideoExportOptions {
@@ -434,9 +434,20 @@ export async function exportVideo(
   const scale = width / 800;
   const fontSize = (project.settings.theme.fontSize || 50) * scale;
 
-  const presetId = project.settings.theme.preset || 'dark';
-  const preset = GRADIENT_PRESETS.find((p) => p.id === presetId) || GRADIENT_PRESETS[0];
-  const background = createGradientBackground(preset, width, height);
+  let background: ImageBitmap;
+  if (project.settings.theme.preset === 'custom' && project.settings.theme.customImageDataUrl) {
+    try {
+      background = await createCustomPhotoBackground(project.settings.theme.customImageDataUrl, width, height);
+    } catch {
+      const presetId = 'dark';
+      const preset = GRADIENT_PRESETS.find((p) => p.id === presetId) || GRADIENT_PRESETS[0];
+      background = createGradientBackground(preset, width, height);
+    }
+  } else {
+    const presetId = project.settings.theme.preset || 'dark';
+    const preset = GRADIENT_PRESETS.find((p) => p.id === presetId) || GRADIENT_PRESETS[0];
+    background = createGradientBackground(preset, width, height);
+  }
 
   const scene: RenderScene = {
     lines: project.lines,
@@ -444,7 +455,7 @@ export async function exportVideo(
     background,
     width,
     height,
-    fontFamily: project.settings.theme.fontFamily || 'Plus Jakarta Sans',
+    fontFamily: project.settings.theme.fontFamily || 'Syne',
     fontSize,
     lineHeight: 1.35,
     lookaheadMs: project.settings.theme.lookaheadMs || 200,

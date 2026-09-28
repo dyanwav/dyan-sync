@@ -14,7 +14,8 @@ import {
   ArrowDown, 
   RotateCcw,
   ArrowRight,
-  Music2
+  Music2,
+  ChevronLeft
 } from 'lucide-react';
 import { TransportControls } from '@/features/audio';
 import { LineItem } from './LineItem';
@@ -24,9 +25,10 @@ import { useTranslation } from '@/features/i18n';
 interface SyncViewProps {
   onOpenCalibration?: () => void;
   onContinueToPreview?: () => void;
+  onBackToSetup?: () => void;
 }
 
-export function SyncView({ onOpenCalibration, onContinueToPreview }: SyncViewProps) {
+export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup }: SyncViewProps) {
   const { 
     lines, 
     currentLineIndex, 
@@ -48,10 +50,23 @@ export function SyncView({ onOpenCalibration, onContinueToPreview }: SyncViewPro
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const activeLineRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll active line to vertical center smoothly
+  // Auto-scroll active line to vertical center with buttery smooth container scrolling
   useEffect(() => {
-    if (activeLineRef.current) {
-      activeLineRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (activeLineRef.current && scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const el = activeLineRef.current;
+      
+      const containerRect = container.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      
+      const currentScrollTop = container.scrollTop;
+      const elRelativeTop = elRect.top - containerRect.top + currentScrollTop;
+      const targetScroll = elRelativeTop - (container.clientHeight / 2) + (elRect.height / 2);
+
+      container.scrollTo({
+        top: Math.max(0, targetScroll),
+        behavior: 'smooth'
+      });
     }
   }, [currentLineIndex]);
 
@@ -179,8 +194,23 @@ export function SyncView({ onOpenCalibration, onContinueToPreview }: SyncViewPro
       
       {/* Top Studio Header Bar */}
       <header className="shrink-0 px-6 py-3.5 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-xl flex flex-wrap justify-between items-center gap-4">
-        {/* Left: Project info & Sync Mode */}
+        {/* Left: Back button & Project info & Sync Mode */}
         <div className="flex items-center gap-3.5 min-w-0">
+          {onBackToSetup && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onBackToSetup}
+              disabled={mode === 'syncing' || mode === 'countdown'}
+              className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-9 px-2.5 shrink-0 cursor-pointer"
+              title="Volver a Configuración"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1 text-zinc-400" />
+              <span>Configuración</span>
+            </Button>
+          )}
+
           <div className="h-10 w-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
             <Music2 className="h-5 w-5 text-blue-400" />
           </div>
@@ -250,7 +280,7 @@ export function SyncView({ onOpenCalibration, onContinueToPreview }: SyncViewPro
               size="sm"
               onClick={onContinueToPreview}
               disabled={mode === 'syncing' || mode === 'countdown'}
-              className="bg-zinc-100 text-zinc-900 hover:bg-zinc-200 font-semibold text-xs ml-1"
+              className="bg-zinc-100 text-zinc-900 hover:bg-zinc-200 font-semibold text-xs ml-1 cursor-pointer"
             >
               <span>{t('sync.continueToPreview')}</span>
               <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
@@ -268,7 +298,7 @@ export function SyncView({ onOpenCalibration, onContinueToPreview }: SyncViewPro
         {/* Native Smooth Scroll Container with Custom Scrollbar */}
         <div 
           ref={scrollContainerRef}
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 md:px-16 lg:px-28 py-10 space-y-3 scroll-smooth custom-scrollbar relative z-10"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 md:px-16 lg:px-28 py-10 space-y-3 custom-scrollbar relative z-10"
         >
           {lines.map((line, index) => (
             <LineItem

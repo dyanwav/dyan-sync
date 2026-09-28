@@ -37,7 +37,7 @@ function calculateLayout(
   const result: TextMetrics[] = [];
   let currentY = 0;
   
-  ctx.font = `800 ${fontSize}px ${fontFamily}`;
+  ctx.font = `800 ${fontSize}px "${fontFamily}", system-ui, sans-serif`;
   const maxWidth = width * 0.88; // 88% of screen width
 
   for (let i = 0; i < lines.length; i++) {
@@ -182,7 +182,7 @@ function drawLine(
   const isActive = options.opacity >= 0.9;
   const isLookahead = options.opacity > 0.3 && !isActive;
 
-  ctx.font = `${isActive ? '800' : '700'} ${Math.round(options.fontSize)}px ${options.fontFamily}`;
+  ctx.font = `${isActive ? '800' : '700'} ${Math.round(options.fontSize)}px "${options.fontFamily}", system-ui, sans-serif`;
   ctx.fillStyle = isActive ? '#FFFFFF' : '#D4D4D8';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
@@ -190,7 +190,7 @@ function drawLine(
   
   if (isActive) {
     // Luminous double-pass glow
-    ctx.shadowColor = 'rgba(255, 255, 255, 0.65)';
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.7)';
     ctx.shadowBlur = 36;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
@@ -202,15 +202,22 @@ function drawLine(
     ctx.shadowBlur = 8;
   }
   
+  // Pass 1: Render glowing base for all wrapped lines
   let currentY = y;
   for (const line of wrappedLines) {
     ctx.fillText(line, x, currentY);
-    if (isActive) {
-      // Crisp overlay pass
-      ctx.shadowBlur = 0;
-      ctx.fillText(line, x, currentY);
-    }
     currentY += options.fontSize * options.lineHeight;
+  }
+
+  // Pass 2: Crisp overlay pass without shadow blur so text stays razor sharp
+  if (isActive) {
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
+    currentY = y;
+    for (const line of wrappedLines) {
+      ctx.fillText(line, x, currentY);
+      currentY += options.fontSize * options.lineHeight;
+    }
   }
   
   ctx.restore();
@@ -239,7 +246,7 @@ export function renderFrame(
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `700 18px 'Plus Jakarta Sans', system-ui, sans-serif`;
+  ctx.font = `800 18px 'Syne', system-ui, sans-serif`;
   ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
   ctx.letterSpacing = '0.15em';
   ctx.fillText('LYRICSYNC STUDIO', width / 2, 80);

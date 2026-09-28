@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useSyncStore } from '../store';
 
 export interface AudioEngineLike {
@@ -12,18 +12,12 @@ export interface AudioEngineLike {
 
 export function useTapper(
   engine: AudioEngineLike | null,
-  tapOffsetMs: number = -120,
-  debounceMs: number = 70
+  _tapOffsetMs: number = -120,
+  _debounceMs: number = 70
 ) {
-  const lastTapRef = useRef<number>(0);
   const { 
     mode, 
-    tapLine, 
     undoLastTap, 
-    skipLine, 
-    markSilence, 
-    startSync, 
-    resumeSync, 
     pauseSync, 
     setMode,
     goToPreviousLine,
@@ -51,9 +45,6 @@ export function useTapper(
 
       if (e.repeat) return;
 
-      const isSpace = e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar';
-      const isB = e.key.toLowerCase() === 'b' || e.code === 'KeyB';
-      const isS = e.key.toLowerCase() === 's' || e.code === 'KeyS';
       const isK = e.key.toLowerCase() === 'k' || e.code === 'KeyK';
       const isJ = e.key.toLowerCase() === 'j' || e.code === 'KeyJ';
       const isL = e.key.toLowerCase() === 'l' || e.code === 'KeyL';
@@ -62,33 +53,6 @@ export function useTapper(
       const isR = e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey;
       const isEsc = e.key === 'Escape';
       const isUndo = e.key === 'Backspace' || (e.key.toLowerCase() === 'z' && (e.ctrlKey || e.metaKey));
-
-      // Handle Space: Start / Resume / Tap
-      if (isSpace) {
-        e.preventDefault();
-        
-        if (mode === 'idle') {
-          startSync();
-          return;
-        }
-
-        if (mode === 'paused') {
-          resumeSync();
-          return;
-        }
-
-        if (mode === 'syncing') {
-          const now = performance.now();
-          if (now - lastTapRef.current < debounceMs) return;
-          lastTapRef.current = now;
-
-          if (engine) {
-            const audioTime = engine.mapEventToAudioTime(e.timeStamp, tapOffsetMs);
-            tapLine(audioTime);
-          }
-        }
-        return;
-      }
 
       // Handle Previous Line (ArrowUp or P)
       if (isUp) {
@@ -127,33 +91,6 @@ export function useTapper(
         } else if (mode === 'countdown') {
           setMode('paused');
         }
-        return;
-      }
-
-      // Handle B (Instrumental / Silence marker)
-      if (isB) {
-        e.preventDefault();
-        if (mode !== 'syncing' || !engine) return;
-
-        const now = performance.now();
-        if (now - lastTapRef.current < debounceMs) return;
-        lastTapRef.current = now;
-
-        const audioTime = engine.mapEventToAudioTime(e.timeStamp, tapOffsetMs);
-        markSilence(audioTime);
-        return;
-      }
-
-      // Handle S (Skip line)
-      if (isS) {
-        e.preventDefault();
-        if (mode !== 'syncing') return;
-
-        const now = performance.now();
-        if (now - lastTapRef.current < debounceMs) return;
-        lastTapRef.current = now;
-
-        skipLine();
         return;
       }
 
@@ -204,14 +141,7 @@ export function useTapper(
   }, [
     engine, 
     mode, 
-    tapOffsetMs, 
-    debounceMs, 
-    tapLine, 
     undoLastTap, 
-    skipLine, 
-    markSilence, 
-    startSync, 
-    resumeSync, 
     pauseSync, 
     setMode, 
     goToPreviousLine, 

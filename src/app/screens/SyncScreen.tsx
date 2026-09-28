@@ -36,6 +36,13 @@ export function SyncScreen() {
     }
   }, [mode, audio.pause]);
 
+  // If audio pauses while in syncing mode, transition sync state to paused
+  useEffect(() => {
+    if (mode === 'syncing' && audio.state.playbackState === 'paused') {
+      useSyncStore.getState().pauseSync();
+    }
+  }, [mode, audio.state.playbackState]);
+
   // Detect track end to auto-finish sync
   useEffect(() => {
     if (mode === 'syncing' && audio.state.playbackState !== 'playing' && audio.state.duration > 0) {

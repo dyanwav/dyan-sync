@@ -19,7 +19,16 @@ export function useTransport({ isPlaying, onTogglePlay, onSeek }: UseTransportPr
         return;
       }
 
+      if (document.activeElement && document.activeElement.tagName === 'BUTTON') {
+        (document.activeElement as HTMLElement).blur();
+      }
+
       switch (e.key) {
+        case ' ':
+        case 'Spacebar':
+          e.preventDefault();
+          onTogglePlay();
+          break;
         case 'k':
         case 'K':
           e.preventDefault();

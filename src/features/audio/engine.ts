@@ -37,40 +37,47 @@ export class AudioEngine {
   
   play(fromTime?: number): void {
     if (!this.audioBuffer) return;
-    if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume().then(() => {
-        if (this.clock.isPlaying) {
-          this.startedAt = this.audioContext.currentTime;
-        }
-      });
-    }
     
-    if (this.sourceNode) {
-      this.sourceNode.stop();
-      this.sourceNode.disconnect();
-    }
-    
-    this.sourceNode = this.audioContext.createBufferSource();
-    this.sourceNode.buffer = this.audioBuffer;
-    this.sourceNode.playbackRate.value = this.clock.playbackRate;
-    this.sourceNode.connect(this.gainNode);
-    
-    this.sourceNode.onended = () => {
-      if (this.clock.isPlaying) {
-        const endTime = this.getCurrentTime();
-        if (endTime >= this.getDuration() - 0.1) {
-            this.stop();
-        }
+    const startAudio = () => {
+      if (!this.audioBuffer) return;
+
+      if (this.sourceNode) {
+        try {
+          this.sourceNode.stop();
+        } catch {}
+        this.sourceNode.disconnect();
+        this.sourceNode = null;
       }
+      
+      this.sourceNode = this.audioContext.createBufferSource();
+      this.sourceNode.buffer = this.audioBuffer;
+      this.sourceNode.playbackRate.value = this.clock.playbackRate || 1;
+      this.sourceNode.connect(this.gainNode);
+      
+      this.sourceNode.onended = () => {
+        if (this.clock.isPlaying) {
+          const endTime = this.getCurrentTime();
+          if (endTime >= this.getDuration() - 0.1) {
+            this.stop();
+          }
+        }
+      };
+      
+      const startTime = fromTime !== undefined ? fromTime : this.pausedAt;
+      const clampedStart = Math.max(0, Math.min(startTime, this.getDuration()));
+      
+      this.sourceNode.start(0, clampedStart);
+      
+      this.startedAt = this.audioContext.currentTime;
+      this.pausedAt = clampedStart;
+      this.clock.isPlaying = true;
     };
-    
-    const startTime = fromTime !== undefined ? fromTime : this.pausedAt;
-    
-    this.sourceNode.start(0, startTime);
-    
-    this.startedAt = this.audioContext.currentTime;
-    this.pausedAt = startTime;
-    this.clock.isPlaying = true;
+
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume().then(startAudio).catch(console.error);
+    } else {
+      startAudio();
+    }
   }
   
   pause(): void {

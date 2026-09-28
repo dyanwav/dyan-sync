@@ -94,7 +94,7 @@ export function ThemeSelector({
   };
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("space-y-2.5", className)}>
       {/* Hidden file input */}
       <input
         type="file"
@@ -105,22 +105,22 @@ export function ThemeSelector({
       />
 
       {/* Custom Photo Section */}
-      <div className="space-y-2">
-        <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+      <div className="space-y-1.5">
+        <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
           Foto Personalizada
         </div>
 
         {customImageDataUrl ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-3 bg-zinc-950/70 border border-zinc-800 p-2.5 rounded-xl">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2.5 bg-zinc-950/70 border border-zinc-800 p-2 rounded-xl">
               {/* Thumbnail */}
               <button
                 type="button"
                 onClick={() => onSelect('custom')}
                 className={cn(
-                  "w-12 h-16 rounded-lg overflow-hidden relative shrink-0 border-2 transition-all cursor-pointer shadow-md",
+                  "w-10 h-14 rounded-lg overflow-hidden relative shrink-0 border-2 transition-all cursor-pointer shadow-md",
                   selectedThemeId === 'custom'
-                    ? "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)] ring-2 ring-blue-500/30"
+                    ? "border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)] ring-2 ring-blue-500/30"
                     : "border-zinc-700 opacity-70 hover:opacity-100"
                 )}
               >
@@ -131,7 +131,7 @@ export function ThemeSelector({
                 />
                 {selectedThemeId === 'custom' && (
                   <div className="absolute inset-0 bg-blue-600/30 flex items-center justify-center">
-                    <Check className="w-4 h-4 text-white drop-shadow" />
+                    <Check className="w-3.5 h-3.5 text-white drop-shadow" />
                   </div>
                 )}
               </button>
@@ -139,8 +139,8 @@ export function ThemeSelector({
               {/* Controls */}
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold text-zinc-200 truncate">Foto del usuario</div>
-                <div className="text-[11px] text-zinc-500 mt-0.5">Recorte 9:16 + oscurecido automático</div>
-                <div className="flex gap-2 mt-2">
+                <div className="text-[10px] text-zinc-500 truncate">Recorte 9:16 + contraste auto</div>
+                <div className="flex gap-2 mt-1.5">
                   <button
                     type="button"
                     disabled={isProcessing}
@@ -159,7 +159,7 @@ export function ThemeSelector({
                       type="button"
                       disabled={isProcessing}
                       onClick={onRemoveCustomImage}
-                      className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 hover:text-red-300 cursor-pointer ml-2 disabled:opacity-50"
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 hover:text-red-300 cursor-pointer ml-1.5 disabled:opacity-50"
                     >
                       <X className="w-3 h-3" />
                       Quitar
@@ -171,11 +171,9 @@ export function ThemeSelector({
 
             {/* Manual Contrast Slider when custom image is selected */}
             {selectedThemeId === 'custom' && onContrastChange && (
-              <div className="bg-zinc-950/60 border border-zinc-800/80 p-3 rounded-xl space-y-2 mt-2">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
-                    Oscurecido / Contraste
-                  </span>
+              <div className="bg-zinc-950/60 border border-zinc-800/80 p-2 rounded-xl space-y-1 mt-1">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-zinc-300 font-semibold">Oscurecido / Contraste</span>
                   <span className="font-mono font-bold text-blue-400">{contrast}%</span>
                 </div>
                 <input
@@ -187,11 +185,6 @@ export function ThemeSelector({
                   onChange={(e) => onContrastChange(Number(e.target.value))}
                   className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
                 />
-                <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
-                  <span>Vívido (15%)</span>
-                  <span>Equilibrado (60%)</span>
-                  <span>Oscuro (95%)</span>
-                </div>
               </div>
             )}
           </div>
@@ -200,33 +193,33 @@ export function ThemeSelector({
             type="button"
             disabled={isProcessing}
             onClick={() => fileInputRef.current?.click()}
-            className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border border-dashed border-zinc-700/80 bg-zinc-950/40 text-zinc-300 hover:text-white hover:border-blue-500/80 hover:bg-blue-600/10 transition-all text-xs font-semibold cursor-pointer shadow-sm disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-dashed border-zinc-700/80 bg-zinc-950/40 text-zinc-300 hover:text-white hover:border-blue-500/80 hover:bg-blue-600/10 transition-all text-xs font-semibold cursor-pointer shadow-sm disabled:opacity-50"
           >
             {isProcessing ? (
-              <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />
             ) : (
-              <ImagePlus className="w-4 h-4 text-blue-400" />
+              <ImagePlus className="w-3.5 h-3.5 text-blue-400" />
             )}
-            <span>{isProcessing ? 'Procesando imagen...' : 'Subir imagen o foto de fondo'}</span>
+            <span>{isProcessing ? 'Procesando...' : 'Subir imagen o foto'}</span>
           </button>
         )}
       </div>
 
       {/* Preset Gradients Section */}
-      <div className="space-y-2">
-        <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+      <div className="space-y-1.5">
+        <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
           Gradientes Cinematográficos
         </div>
-        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5">
+        <div className="grid grid-cols-6 gap-1.5">
           {GRADIENT_PRESETS.map((preset) => (
             <button
               key={preset.id}
               type="button"
               onClick={() => onSelect(preset.id)}
               className={cn(
-                "h-14 rounded-xl relative overflow-hidden transition-all duration-200 cursor-pointer focus:outline-none group",
+                "h-8 rounded-lg relative overflow-hidden transition-all duration-200 cursor-pointer focus:outline-none group",
                 selectedThemeId === preset.id
-                  ? "ring-2 ring-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.35)] scale-105"
+                  ? "ring-2 ring-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.35)] scale-105"
                   : "ring-1 ring-zinc-800 hover:ring-zinc-600 hover:scale-102 opacity-80 hover:opacity-100"
               )}
               title={preset.name}
@@ -238,7 +231,7 @@ export function ThemeSelector({
             >
               {selectedThemeId === preset.id && (
                 <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                  <Check className="w-3.5 h-3.5 text-white drop-shadow" />
+                  <Check className="w-3 h-3 text-white drop-shadow" />
                 </div>
               )}
               <span className="sr-only">{preset.name}</span>

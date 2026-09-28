@@ -178,16 +178,35 @@ export function ExportScreen() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFullscreen]);
 
+  // Multi-candidate audio blob resolver to handle any ID key convention
+  const resolveAudioBlob = async (): Promise<Blob | null> => {
+    if (!project) return null;
+    const candidates = [
+      project.audio?.blobId,
+      project.id,
+      `audio_${project.id}`,
+      project.audio?.blobId ? `audio_${project.audio.blobId}` : null
+    ].filter(Boolean) as string[];
+
+    for (const cid of candidates) {
+      try {
+        const b = await loadBlob(cid);
+        if (b) return b;
+      } catch {}
+    }
+    return null;
+  };
+
   // Auto-load audio into engine if not loaded (e.g. direct reload on export view)
   useEffect(() => {
-    if (!audio.state.isLoaded && project?.audio?.blobId) {
-      loadBlob(project.audio.blobId).then((blob) => {
+    if (!audio.engine.getAudioBuffer()) {
+      resolveAudioBlob().then((blob) => {
         if (blob) {
           audio.loadAudio(blob).catch((err) => console.warn('Could not auto-load audio for preview:', err));
         }
       });
     }
-  }, [audio.state.isLoaded, project?.audio?.blobId]);
+  }, [project?.id, project?.audio?.blobId]);
 
   const handleTogglePreviewAudio = async () => {
     if (isPreviewPlaying) {
@@ -197,15 +216,15 @@ export function ExportScreen() {
     }
 
     try {
-      // 1. Ensure AudioContext is running (handles browser autoplay policies)
+      // 1. Ensure AudioContext is running
       const ctx = audio.engine.getAudioContext();
       if (ctx.state === 'suspended') {
         await ctx.resume();
       }
 
       // 2. Ensure audioBuffer is decoded in AudioEngine
-      if (!audio.engine.getAudioBuffer() && project?.audio?.blobId) {
-        const blob = await loadBlob(project.audio.blobId);
+      if (!audio.engine.getAudioBuffer()) {
+        const blob = await resolveAudioBlob();
         if (blob) {
           await audio.loadAudio(blob);
         }
@@ -216,9 +235,14 @@ export function ExportScreen() {
         return;
       }
 
-      // 3. Seek to snippet start and play
-      audio.engine.seek(exportStart);
-      audio.play();
+      // 3. Ensure volume is audible
+      audio.engine.setVolume(1);
+
+      // 4. Seek to snippet start and play directly from start point
+      const startPoint = Math.max(0, exportStart);
+      audio.pause();
+      audio.engine.seek(startPoint);
+      audio.play(startPoint);
       setIsPreviewPlaying(true);
     } catch (err) {
       console.error('Error starting audio preview:', err);
@@ -230,29 +254,30 @@ export function ExportScreen() {
     if (!isPreviewPlaying) return;
 
     let animId: number;
-    let started = false;
+    let frames = 0;
 
     const checkSnippet = () => {
       const current = audio.engine.getCurrentTime();
       const isPlaying = audio.engine.clock.isPlaying;
 
-      if (isPlaying) {
-        started = true;
+      frames++;
+
+      // Allow 5 frames grace period for audio buffer to start playing
+      if (frames > 5) {
+        if (current >= exportEnd || !isPlaying) {
+          audio.pause();
+          audio.engine.seek(exportStart);
+          setIsPreviewPlaying(false);
+          return;
+        }
       }
 
-      // Stop once playback has started and reaches exportEnd or user paused
-      if (started && (current >= exportEnd || !isPlaying)) {
-        audio.pause();
-        audio.engine.seek(exportStart);
-        setIsPreviewPlaying(false);
-        return;
-      }
       animId = requestAnimationFrame(checkSnippet);
     };
 
     animId = requestAnimationFrame(checkSnippet);
     return () => cancelAnimationFrame(animId);
-  }, [isPreviewPlaying, exportStart, exportEnd, audio]);
+  }, [isPreviewPlaying, exportStart, exportEnd]);
 
   // Stop preview if range changes
   useEffect(() => {

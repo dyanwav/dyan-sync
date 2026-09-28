@@ -6,8 +6,6 @@ import { Button } from '@/shared/ui/button';
 import { cn } from '@/shared/utils/cn';
 import { 
   Undo2, 
-  VolumeX, 
-  FastForward, 
   FileEdit, 
   Settings2, 
   ArrowUp, 
@@ -34,8 +32,6 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
     currentLineIndex, 
     mode, 
     undoLastTap, 
-    skipLine, 
-    markSilence,
     goToPreviousLine,
     goToNextLine,
   } = useSyncStore();
@@ -151,20 +147,6 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
     }
   };
 
-  const handleSilence = (e: React.MouseEvent) => {
-    e.preventDefault();
-    (e.currentTarget as HTMLElement).blur();
-    if (audio.engine) {
-      const audioTime = audio.engine.mapEventToAudioTime(e.timeStamp, project?.settings.tapOffsetMs ?? -120);
-      markSilence(audioTime);
-    }
-  };
-
-  const handleSkip = (e: React.MouseEvent) => {
-    e.preventDefault();
-    (e.currentTarget as HTMLElement).blur();
-    skipLine();
-  };
 
   const handlePrevLine = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -327,105 +309,73 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
         </div>
       </main>
 
-      {/* Bottom Compact Studio Dock (Musixmatch Reference) */}
-      <footer className="shrink-0 border-t border-zinc-800/80 bg-zinc-950/95 backdrop-blur-2xl px-4 py-2.5 flex flex-col gap-2 shadow-[0_-10px_35px_rgba(0,0,0,0.6)] z-20">
-        
-        {/* Navigation & Editing Tools Compact Row */}
-        <div className="w-full max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-2 px-1">
-          
-          {/* Navegación Musixmatch con flechas arriba y abajo */}
-          <div className="flex items-center gap-1.5">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handlePrevLine}
-              disabled={currentLineIndex <= 0}
-              className="bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 h-8 px-2.5 text-xs rounded-lg cursor-pointer"
-              title="Línea anterior (-2.5s) (Atajo: ↑ o P)"
-            >
-              <ArrowUp className="h-3.5 w-3.5 mr-1 text-blue-400" />
-              <span>Anterior</span>
-            </Button>
+      {/* Bottom Compact Studio Dock with Integrated Controls */}
+      <footer className="shrink-0 border-t border-zinc-800/80 bg-zinc-950/95 backdrop-blur-2xl px-4 py-2 flex justify-center shadow-[0_-10px_35px_rgba(0,0,0,0.6)] z-20">
+        <div className="w-full max-w-5xl">
+          <TransportControls 
+            audio={audio}
+            leftActions={
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrevLine}
+                  disabled={currentLineIndex <= 0}
+                  className="bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 h-8 px-2 sm:px-2.5 text-xs rounded-lg cursor-pointer"
+                  title="Línea anterior (-2.5s) (Atajo: ↑ o P)"
+                >
+                  <ArrowUp className="h-3.5 w-3.5 sm:mr-1 text-blue-400" />
+                  <span className="hidden sm:inline">Anterior</span>
+                </Button>
 
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleNextLine}
-              disabled={currentLineIndex >= lines.length - 1}
-              className="bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 h-8 px-2.5 text-xs rounded-lg cursor-pointer"
-              title="Línea siguiente (Atajo: ↓ o N)"
-            >
-              <ArrowDown className="h-3.5 w-3.5 mr-1 text-blue-400" />
-              <span>Siguiente</span>
-            </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextLine}
+                  disabled={currentLineIndex >= lines.length - 1}
+                  className="bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 h-8 px-2 sm:px-2.5 text-xs rounded-lg cursor-pointer"
+                  title="Línea siguiente (Atajo: ↓ o N)"
+                >
+                  <ArrowDown className="h-3.5 w-3.5 sm:mr-1 text-blue-400" />
+                  <span className="hidden sm:inline">Siguiente</span>
+                </Button>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleRewindCurrent}
-              className="text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 h-8 px-2 rounded-lg cursor-pointer"
-              title="Rebobinar 2.5s en línea actual (Atajo: R)"
-            >
-              <RotateCcw className="h-3 w-3 mr-1" />
-              <span>-2.5s</span>
-            </Button>
-          </div>
-
-          {/* Atajo visual discreto */}
-          <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-zinc-400 bg-zinc-900/80 px-2.5 py-0.5 rounded-full border border-zinc-800/80">
-            <span>Marcar: <kbd className="px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700">Espacio</kbd></span>
-            <span className="text-zinc-600">•</span>
-            <span>Navegar: <kbd className="px-1 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700">↑</kbd> <kbd className="px-1 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700 ml-0.5">↓</kbd></span>
-          </div>
-
-          {/* Herramientas Auxiliares Compactas */}
-          <div className="flex items-center gap-1.5">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleUndo}
-              className="bg-zinc-900/90 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white h-8 px-2.5 text-xs rounded-lg cursor-pointer"
-              title="Deshacer última marca (Backspace / Ctrl+Z)"
-            >
-              <Undo2 className="h-3.5 w-3.5 mr-1 text-amber-400" />
-              <span>Deshacer</span>
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleSilence}
-              className="bg-zinc-900/90 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white h-8 px-2.5 text-xs rounded-lg cursor-pointer"
-              title="Marcar silencio instrumental (B)"
-            >
-              <VolumeX className="h-3.5 w-3.5 mr-1 text-purple-400" />
-              <span>Silencio</span>
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleSkip}
-              className="bg-zinc-900/90 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white h-8 px-2.5 text-xs rounded-lg cursor-pointer"
-              title="Omitir línea (S)"
-            >
-              <FastForward className="h-3.5 w-3.5 mr-1 text-blue-400" />
-              <span>Saltar</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Reproductor de audio compacto y Scrubber */}
-        <div className="w-full flex justify-center">
-          <div className="w-full max-w-5xl">
-            <TransportControls audio={audio} />
-          </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRewindCurrent}
+                  className="text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 h-8 px-2 rounded-lg cursor-pointer"
+                  title="Rebobinar 2.5s en línea actual (Atajo: R)"
+                >
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  <span>-2.5s</span>
+                </Button>
+              </div>
+            }
+            centerActions={
+              <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400 bg-zinc-900/80 px-2.5 py-0.5 rounded-full border border-zinc-800/80">
+                <span>Play/Pausa: <kbd className="px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700">Espacio</kbd></span>
+                <span className="text-zinc-600">•</span>
+                <span>Navegar: <kbd className="px-1 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700">↑</kbd><kbd className="px-1 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700 ml-0.5">↓</kbd></span>
+              </div>
+            }
+            rightActions={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleUndo}
+                className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white h-8 px-2 sm:px-2.5 text-xs rounded-lg cursor-pointer"
+                title="Deshacer última marca (Backspace / Ctrl+Z)"
+              >
+                <Undo2 className="h-3.5 w-3.5 sm:mr-1 text-amber-400" />
+                <span className="hidden sm:inline">Deshacer</span>
+              </Button>
+            }
+          />
         </div>
       </footer>
 

@@ -164,50 +164,50 @@ function getLineStyle(
   lines: LyricLine[],
   t: number,
   lookaheadMs: number
-): { opacity: number; scale: number; blur: number } {
+): { opacity: number; scale: number } {
   const line = lines[index];
   const lookaheadSec = lookaheadMs / 1000;
   
   if (line.start === null) {
-    return { opacity: 0.18, scale: 1.0, blur: 6.5 };
+    return { opacity: 0.18, scale: 1.0 };
   }
 
   if (activeIndex < 0) {
     const start = line.start;
     if (t >= start - lookaheadSec) {
-      return { opacity: 0.45, scale: 1.0, blur: 2.5 };
+      return { opacity: 0.45, scale: 1.0 };
     }
     const isFirstVocal = lines.findIndex(l => l.kind === 'lyric' && l.text.trim() !== '') === index;
     return isFirstVocal
-      ? { opacity: 0.45, scale: 1.0, blur: 2.5 }
-      : { opacity: 0, scale: 1.0, blur: 12 };
+      ? { opacity: 0.45, scale: 1.0 }
+      : { opacity: 0, scale: 1.0 };
   }
 
   const dist = getVocalLineDistance(lines, index, activeIndex);
 
-  // Active line: Centered, 100% sharp, bright luminous glow
+  // Active line: Centered, 100% opacity, bright luminous glow
   if (dist === 0) {
     const start = line.start;
     if (t >= start) {
-      return { opacity: 1.0, scale: 1.05, blur: 0 };
+      return { opacity: 1.0, scale: 1.05 };
     } else if (t >= start - lookaheadSec) {
-      return { opacity: 0.85, scale: 1.02, blur: 0 };
+      return { opacity: 0.85, scale: 1.02 };
     }
-    return { opacity: 0.7, scale: 1.0, blur: 0 };
+    return { opacity: 0.7, scale: 1.0 };
   }
 
-  // Immediate previous or next line (±1): softly blurred and dimmed
+  // Immediate previous or next line (±1): 45% opacity
   if (dist === 1) {
-    return { opacity: 0.45, scale: 1.0, blur: 2.5 };
+    return { opacity: 0.45, scale: 1.0 };
   }
 
-  // Second previous or next line (±2): deeply blurred, fading into background
+  // Second previous or next line (±2): 18% opacity
   if (dist === 2) {
-    return { opacity: 0.18, scale: 1.0, blur: 6.5 };
+    return { opacity: 0.18, scale: 1.0 };
   }
 
   // Third line and beyond (≥ 3): completely invisible
-  return { opacity: 0, scale: 1.0, blur: 12 };
+  return { opacity: 0, scale: 1.0 };
 }
 
 function drawLine(
@@ -216,27 +216,21 @@ function drawLine(
   wrappedLines: string[],
   x: number,
   y: number,
-  options: { fontFamily: string; fontSize: number; opacity: number; blur: number; lineHeight: number; width: number }
+  options: { fontFamily: string; fontSize: number; opacity: number; lineHeight: number; width: number }
 ) {
   if (options.opacity <= 0) return;
 
   ctx.save();
-  const isActive = options.blur === 0 && options.opacity >= 0.85;
+  const isActive = options.opacity >= 0.85;
 
   ctx.font = `${isActive ? '800' : '700'} ${Math.round(options.fontSize)}px "${options.fontFamily}", system-ui, sans-serif`;
   ctx.fillStyle = isActive ? '#FFFFFF' : '#D4D4D8';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.globalAlpha = options.opacity;
-  
-  if (options.blur > 0) {
-    ctx.filter = `blur(${options.blur}px)`;
-  } else {
-    ctx.filter = 'none';
-  }
 
   if (isActive) {
-    // Luminous double-pass glow
+    // Luminous double-pass glow for active line
     ctx.shadowColor = 'rgba(255, 255, 255, 0.75)';
     ctx.shadowBlur = 36;
     ctx.shadowOffsetX = 0;
@@ -246,7 +240,7 @@ function drawLine(
     ctx.shadowBlur = 6;
   }
   
-  // Pass 1: Render glowing/blurred base for all wrapped lines
+  // Pass 1: Render glowing base for all wrapped lines
   let currentY = y;
   for (const line of wrappedLines) {
     ctx.fillText(line, x, currentY);
@@ -325,15 +319,14 @@ export function renderFrame(
     if (drawY + lineLayout.totalHeight < -150 || drawY > height + 150) continue;
     
     // Determine line state and styling
-    const { opacity, scale, blur } = getLineStyle(i, activeIndex, lines, t, lookaheadMs);
+    const { opacity, scale } = getLineStyle(i, activeIndex, lines, t, lookaheadMs);
     if (opacity <= 0) continue;
     
-    // Draw the line with progressive blur
+    // Draw the line with pure progressive opacity
     drawLine(ctx, line.text, lineLayout.wrappedLines, width / 2, drawY, {
       fontFamily,
       fontSize: fontSize * scale,
       opacity,
-      blur,
       lineHeight,
       width,
     });

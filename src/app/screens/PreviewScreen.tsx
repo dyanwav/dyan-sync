@@ -174,14 +174,14 @@ export function PreviewScreen() {
         </div>
 
         {/* Right Panel: Themes & Typography */}
-        <div className="flex-[1] flex flex-col gap-4 min-h-0 min-w-[340px]">
-          <div className="flex-1 rounded-2xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl p-5 overflow-y-auto space-y-6">
+        <div className="flex-[1] flex flex-col gap-3 min-h-0 min-w-[320px]">
+          <div className="flex-1 rounded-2xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl p-3.5 overflow-y-auto space-y-3.5">
             
             {/* Background Theme Selector */}
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300 mb-3 flex items-center justify-between">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 mb-2 flex items-center justify-between">
                 <span>{t('preview.theme')}</span>
-                <span className="text-[11px] font-normal text-zinc-500 font-mono">
+                <span className="text-[10px] font-normal text-zinc-500 font-mono">
                   {project?.settings.theme.preset === 'custom' ? 'Foto propia' : 'Gradiente'}
                 </span>
               </h2>
@@ -205,50 +205,45 @@ export function PreviewScreen() {
               />
             </div>
 
-            {/* Typography Selector (Syne Display + Brand New Fonts) */}
-            <div className="border-t border-zinc-800/80 pt-5">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300">
-                  Tipografía (Reels Ready)
+            {/* Typography Selector (2-column compact grid) */}
+            <div className="border-t border-zinc-800/80 pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                  Tipografía
                 </h2>
-                <span className="text-[11px] font-mono text-blue-400 font-semibold">
+                <span className="text-[10px] font-mono text-blue-400 font-semibold truncate max-w-[150px]">
                   {currentFontFamily}
                 </span>
               </div>
               
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 {FONT_OPTIONS.map((f) => (
                   <button
                     key={f.id}
                     onClick={() => handleFontSelect(f.id)}
                     className={cn(
-                      "flex items-center justify-between p-3 rounded-xl border text-left transition-all cursor-pointer",
+                      "flex flex-col items-start px-2.5 py-1.5 rounded-lg border text-left transition-all cursor-pointer",
                       currentFontFamily === f.id
-                        ? "bg-blue-600/15 border-blue-500/80 text-white shadow-[0_0_15px_rgba(59,130,246,0.25)] ring-1 ring-blue-500/50"
+                        ? "bg-blue-600/20 border-blue-500/80 text-white ring-1 ring-blue-500/50 shadow-sm"
                         : "bg-zinc-950/40 border-zinc-800/80 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40"
                     )}
                   >
-                    <div>
-                      <div className="font-bold text-sm text-zinc-100 flex items-center gap-2" style={{ fontFamily: `"${f.id}", sans-serif` }}>
-                        {f.name}
-                        <span className="text-[10px] uppercase font-mono font-medium px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">
-                          {f.category}
-                        </span>
-                      </div>
-                      <div className="text-xs text-zinc-500 mt-0.5">{f.preview}</div>
+                    <div className="font-bold text-xs text-zinc-100 truncate w-full flex items-center justify-between" style={{ fontFamily: `"${f.id}", sans-serif` }}>
+                      <span className="truncate">{f.name}</span>
+                      {currentFontFamily === f.id && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 ml-1 shadow-[0_0_8px_#3b82f6]" />
+                      )}
                     </div>
-                    {currentFontFamily === f.id && (
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_#3b82f6]" />
-                    )}
+                    <div className="text-[10px] text-zinc-500 truncate w-full font-mono mt-0.5">{f.category}</div>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Font Size Selector */}
-            <div className="border-t border-zinc-800/80 pt-5">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300 mb-3">Tamaño de Letra</h2>
-              <div className="grid grid-cols-3 gap-2">
+            {/* Font Size Selector (compact row) */}
+            <div className="border-t border-zinc-800/80 pt-3">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 mb-2">Tamaño de Letra</h2>
+              <div className="grid grid-cols-3 gap-1.5">
                 {[
                   { label: 'Compacto', size: 40 },
                   { label: 'Estándar', size: 50 },
@@ -258,7 +253,7 @@ export function PreviewScreen() {
                     key={s.size}
                     onClick={() => handleSizeSelect(s.size)}
                     className={cn(
-                      "py-2.5 px-3 rounded-lg border text-xs font-semibold transition-all cursor-pointer",
+                      "py-1.5 px-2 rounded-lg border text-xs font-semibold transition-all cursor-pointer text-center",
                       currentFontSize === s.size
                         ? "bg-blue-600 text-white border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.3)]"
                         : "bg-zinc-950/40 border-zinc-800/80 text-zinc-400 hover:text-zinc-200"
@@ -273,36 +268,38 @@ export function PreviewScreen() {
         </div>
       </div>
 
-      {/* Bottom Bar: Full-Width Studio Player Dock with Navigation (Matching SyncView) */}
-      <footer className="shrink-0 rounded-2xl border border-zinc-800/90 bg-zinc-950/95 backdrop-blur-2xl px-6 py-3.5 flex flex-col gap-3 shadow-[0_-10px_35px_rgba(0,0,0,0.5)] z-20">
-        
-        {/* Navigation Action Row */}
-        <div className="w-full flex items-center justify-between">
-          <Button 
-            variant="outline"
-            size="sm"
-            onClick={() => setView('sync')}
-            className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-9 cursor-pointer"
-          >
-            <ChevronLeft className="mr-1.5 h-4 w-4" />
-            <span>Volver a Sincronizar</span>
-          </Button>
-
-          <Button 
-            size="sm"
-            onClick={() => setView('export')}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs h-9 px-4 cursor-pointer shadow-[0_0_15px_rgba(59,130,246,0.35)]"
-          >
-            <span>{t('preview.continueToExport')}</span>
-            <ArrowRight className="ml-1.5 h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Player Dock (Identical to SyncView) */}
-        <div className="w-full flex justify-center pt-2 border-t border-zinc-900">
-          <div className="w-full max-w-4xl">
-            <TransportControls audio={audio} />
-          </div>
+      {/* Bottom Bar: Compact Studio Player Dock with Integrated Navigation */}
+      <footer className="shrink-0 border-t border-zinc-800/80 bg-zinc-950/95 backdrop-blur-2xl px-4 py-2 flex justify-center shadow-[0_-10px_35px_rgba(0,0,0,0.5)] z-20">
+        <div className="w-full max-w-5xl">
+          <TransportControls 
+            audio={audio}
+            compact={true}
+            leftActions={
+              <Button 
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setView('sync')}
+                className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-8 px-2.5 rounded-lg cursor-pointer"
+                title="Volver a Sincronizar"
+              >
+                <ChevronLeft className="mr-1 h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Sincronizar</span>
+              </Button>
+            }
+            rightActions={
+              <Button 
+                type="button"
+                size="sm"
+                onClick={() => setView('export')}
+                className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs h-8 px-3 rounded-lg cursor-pointer shadow-[0_0_12px_rgba(59,130,246,0.35)]"
+                title="Continuar a Exportar"
+              >
+                <span>{t('preview.continueToExport')}</span>
+                <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Button>
+            }
+          />
         </div>
       </footer>
 

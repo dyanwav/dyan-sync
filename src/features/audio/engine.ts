@@ -137,6 +137,14 @@ export class AudioEngine {
   getDuration(): number {
     return this.audioBuffer ? this.audioBuffer.duration : 0;
   }
+
+  getAudioBuffer(): AudioBuffer | null {
+    return this.audioBuffer;
+  }
+
+  getAudioContext(): AudioContext {
+    return this.audioContext;
+  }
   
   mapEventToAudioTime(eventTimeStamp: number, tapOffsetMs: number): number {
     if (!this.clock.isPlaying) return this.pausedAt;

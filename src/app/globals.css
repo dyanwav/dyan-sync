@@ -2,8 +2,9 @@
 
 /* TODO: Self-host fonts for privacy. Use @font-face with local assets instead of remote CDNs or rely on these system fallbacks. */
 @theme {
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-heading: 'Space Grotesk', system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Syne', 'Space Grotesk', system-ui, sans-serif;
+  --font-display: 'Syne', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   --color-background: oklch(0.145 0 0);

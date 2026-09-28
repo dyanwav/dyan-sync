@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useProjectStore } from '@/features/project/store';
 import { useSyncStore, useTapper } from '@/features/sync';
 import { useAudioEngine } from '@/features/audio';
@@ -24,12 +24,16 @@ export function SyncScreen() {
     project?.settings.debounceMs ?? 70
   );
 
-  // Sync project lines to sync store on enter
+  // Sync project lines to sync store ONCE on enter
+  const initializedProjectRef = useRef<string | null>(null);
   useEffect(() => {
-    if (project?.lines && project.lines.length > 0) {
-      useSyncStore.getState().setLines(project.lines);
+    if (project && initializedProjectRef.current !== project.id) {
+      initializedProjectRef.current = project.id;
+      if (project.lines && project.lines.length > 0) {
+        useSyncStore.getState().setLines(project.lines);
+      }
     }
-  }, [project]);
+  }, [project?.id]);
 
   // Pause audio if sync is paused
   useEffect(() => {
@@ -51,14 +55,14 @@ export function SyncScreen() {
 
   const scene = {
     lines: project?.lines || [],
-    theme: project?.settings.theme || { preset: 'dark' as const, fontFamily: 'Inter', fontSize: 24, lineSpacing: 1.5, lookaheadMs: 200 },
+    theme: project?.settings.theme || { preset: 'dark' as const, fontFamily: 'Plus Jakarta Sans', fontSize: 50, lineSpacing: 1.35, lookaheadMs: 200 },
     background: bgBitmap,
     width: 800,
     height: 1422,
-    fontFamily: project?.settings.theme.fontFamily || 'Inter',
-    fontSize: project?.settings.theme.fontSize || 24,
-    lineHeight: project?.settings.theme.lineSpacing || 1.5,
-    lookaheadMs: project?.settings.theme.lookaheadMs || 200,
+    fontFamily: project?.settings.theme.fontFamily || "'Plus Jakarta Sans', sans-serif",
+    fontSize: 50,
+    lineHeight: 1.35,
+    lookaheadMs: 200,
   };
 
   useEffect(() => {

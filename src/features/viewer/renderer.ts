@@ -37,8 +37,8 @@ function calculateLayout(
   const result: TextMetrics[] = [];
   let currentY = 0;
   
-  ctx.font = `bold ${fontSize}px ${fontFamily}`;
-  const maxWidth = width * 0.85; // 85% of screen width
+  ctx.font = `800 ${fontSize}px ${fontFamily}`;
+  const maxWidth = width * 0.88; // 88% of screen width
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -78,7 +78,7 @@ function calculateLayout(
     });
     
     // Add gap between lines
-    currentY += layout.totalHeight + fontSize * 1.5; 
+    currentY += layout.totalHeight + fontSize * 1.1; 
   }
   
   return result;
@@ -179,22 +179,37 @@ function drawLine(
   options: { fontFamily: string, fontSize: number, opacity: number, lineHeight: number, width: number }
 ) {
   ctx.save();
-  ctx.font = `bold ${options.fontSize}px ${options.fontFamily}`;
-  ctx.fillStyle = '#FFFFFF';
+  const isActive = options.opacity >= 0.9;
+  const isLookahead = options.opacity > 0.3 && !isActive;
+
+  ctx.font = `${isActive ? '800' : '700'} ${Math.round(options.fontSize)}px ${options.fontFamily}`;
+  ctx.fillStyle = isActive ? '#FFFFFF' : '#D4D4D8';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.globalAlpha = options.opacity;
   
-  if (options.opacity > 0.8) {
-    ctx.shadowColor = 'rgba(255,255,255,0.3)';
-    ctx.shadowBlur = 20;
+  if (isActive) {
+    // Luminous double-pass glow
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.65)';
+    ctx.shadowBlur = 36;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
+  } else if (isLookahead) {
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.25)';
+    ctx.shadowBlur = 18;
+  } else {
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 8;
   }
   
   let currentY = y;
   for (const line of wrappedLines) {
     ctx.fillText(line, x, currentY);
+    if (isActive) {
+      // Crisp overlay pass
+      ctx.shadowBlur = 0;
+      ctx.fillText(line, x, currentY);
+    }
     currentY += options.fontSize * options.lineHeight;
   }
   
@@ -203,7 +218,7 @@ function drawLine(
 
 /**
  * Pure render function. Given a canvas context, scene data, and time t,
- * draws the complete 9:16 viewer frame.
+ * draws the complete 9:16 viewer frame with Instagram-worthy typography.
  */
 export function renderFrame(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -216,20 +231,30 @@ export function renderFrame(
   if (background) {
     ctx.drawImage(background, 0, 0, width, height);
   } else {
-    ctx.fillStyle = '#0a0a0a';
+    ctx.fillStyle = '#09090b';
     ctx.fillRect(0, 0, width, height);
   }
+
+  // 2. Elegant top music header pill
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `700 18px 'Plus Jakarta Sans', system-ui, sans-serif`;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+  ctx.letterSpacing = '0.15em';
+  ctx.fillText('LYRICSYNC STUDIO', width / 2, 80);
+  ctx.restore();
   
-  // 2. Find active line index
+  // 3. Find active line index
   const activeIndex = findActiveLineIndex(lines, t, lookaheadMs);
   
-  // 3. Calculate layout and positions
+  // 4. Calculate layout and positions with enhanced spacing
   const layout = calculateLayout(ctx, lines, width, height, fontFamily, fontSize, lineHeight);
   
-  // 4. Calculate scroll offset
+  // 5. Calculate scroll offset
   const scrollY = calculateScrollY(lines, activeIndex, t, layout, height);
   
-  // 5. Draw each visible line
+  // 6. Draw each visible line
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (line.kind === 'section') continue;
@@ -240,7 +265,7 @@ export function renderFrame(
     const drawY = lineLayout.y - scrollY;
     
     // Skip lines that are off-screen
-    if (drawY + lineLayout.totalHeight < -100 || drawY > height + 100) continue;
+    if (drawY + lineLayout.totalHeight < -150 || drawY > height + 150) continue;
     
     // Determine line state and styling
     const { opacity, scale } = getLineStyle(i, activeIndex, lines, t, lookaheadMs);

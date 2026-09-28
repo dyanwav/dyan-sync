@@ -2,6 +2,12 @@ import { useProjectStore } from '@/features/project/store';
 import { exportLrc, downloadLrc, exportVideo, downloadVideoBlob, getDecodedAudio } from '@/features/export';
 import { useAudioEngine } from '@/features/audio';
 import { loadBlob } from '@/features/project/services/db';
+import { 
+  CanvasPreview, 
+  GRADIENT_PRESETS, 
+  createGradientBackground, 
+  createCustomPhotoBackground 
+} from '@/features/viewer';
 import { Button } from '@/shared/ui/button';
 import { Slider } from '@/shared/ui/slider';
 import { 
@@ -19,7 +25,9 @@ import {
   RefreshCw, 
   Film,
   Play,
-  Pause
+  Pause,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from '@/features/i18n';
@@ -106,6 +114,69 @@ export function ExportScreen() {
 
   // Audio preview playback for selected export range
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
+  const [customBgBitmap, setCustomBgBitmap] = useState<ImageBitmap | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'live' | 'video'>('live');
+
+  // Load custom photo bitmap whenever customImageDataUrl or contrast changes
+  useEffect(() => {
+    let cancelled = false;
+    const loadCustom = async () => {
+      if (project?.settings.theme.preset === 'custom' && project?.settings.theme.customImageDataUrl) {
+        try {
+          const contrast = project.settings.theme.contrast ?? 60;
+          const bmp = await createCustomPhotoBackground(project.settings.theme.customImageDataUrl, 800, 1422, contrast);
+          if (!cancelled) setCustomBgBitmap(bmp);
+        } catch (err) {
+          console.error('Error generating custom photo bitmap in ExportScreen:', err);
+          if (!cancelled) setCustomBgBitmap(null);
+        }
+      } else {
+        if (!cancelled) setCustomBgBitmap(null);
+      }
+    };
+    loadCustom();
+    return () => {
+      cancelled = true;
+    };
+  }, [project?.settings.theme.preset, project?.settings.theme.customImageDataUrl, project?.settings.theme.contrast]);
+
+  const bgBitmap = useMemo(() => {
+    if (project?.settings.theme.preset === 'custom' && customBgBitmap) {
+      return customBgBitmap;
+    }
+    try {
+      const presetId = project?.settings.theme.preset || 'dark';
+      const actualPresetId = presetId === 'custom' ? 'dark' : presetId;
+      const preset = GRADIENT_PRESETS.find(p => p.id === actualPresetId) || GRADIENT_PRESETS[0];
+      return createGradientBackground(preset, 800, 1422);
+    } catch {
+      return null;
+    }
+  }, [project?.settings.theme.preset, customBgBitmap]);
+
+  const scene = useMemo(() => ({
+    lines: project?.lines || [],
+    theme: project?.settings.theme || { preset: 'dark' as const, fontFamily: 'Syne', fontSize: 50, lineSpacing: 1.35, lookaheadMs: 200 },
+    background: bgBitmap,
+    width: 800,
+    height: 1422,
+    fontFamily: project?.settings.theme.fontFamily || 'Syne',
+    fontSize: project?.settings.theme.fontSize || 50,
+    lineHeight: 1.35,
+    lookaheadMs: 200,
+  }), [project?.lines, project?.settings.theme, bgBitmap]);
+
+  // Handle escape key in fullscreen
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
 
   // Auto-load audio into engine if not loaded (e.g. direct reload on export view)
   useEffect(() => {
@@ -118,14 +189,40 @@ export function ExportScreen() {
     }
   }, [audio.state.isLoaded, project?.audio?.blobId]);
 
-  const handleTogglePreviewAudio = () => {
+  const handleTogglePreviewAudio = async () => {
     if (isPreviewPlaying) {
       audio.pause();
       setIsPreviewPlaying(false);
-    } else {
+      return;
+    }
+
+    try {
+      // 1. Ensure AudioContext is running (handles browser autoplay policies)
+      const ctx = audio.engine.getAudioContext();
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+
+      // 2. Ensure audioBuffer is decoded in AudioEngine
+      if (!audio.engine.getAudioBuffer() && project?.audio?.blobId) {
+        const blob = await loadBlob(project.audio.blobId);
+        if (blob) {
+          await audio.loadAudio(blob);
+        }
+      }
+
+      if (!audio.engine.getAudioBuffer()) {
+        console.warn('Audio buffer not loaded yet');
+        return;
+      }
+
+      // 3. Seek to snippet start and play
       audio.engine.seek(exportStart);
       audio.play();
       setIsPreviewPlaying(true);
+    } catch (err) {
+      console.error('Error starting audio preview:', err);
+      setIsPreviewPlaying(false);
     }
   };
 
@@ -133,9 +230,18 @@ export function ExportScreen() {
     if (!isPreviewPlaying) return;
 
     let animId: number;
+    let started = false;
+
     const checkSnippet = () => {
       const current = audio.engine.getCurrentTime();
-      if (current >= exportEnd || !audio.engine.clock.isPlaying) {
+      const isPlaying = audio.engine.clock.isPlaying;
+
+      if (isPlaying) {
+        started = true;
+      }
+
+      // Stop once playback has started and reaches exportEnd or user paused
+      if (started && (current >= exportEnd || !isPlaying)) {
         audio.pause();
         audio.engine.seek(exportStart);
         setIsPreviewPlaying(false);
@@ -313,7 +419,7 @@ export function ExportScreen() {
           {/* Left Column: 9:16 Video Player or Preview (5 cols) */}
           <div className="lg:col-span-5 flex flex-col items-center">
             <div className="w-full max-w-[340px] aspect-[9/16] rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 shadow-2xl relative flex flex-col items-center justify-center">
-              {exportedVideoUrl ? (
+              {exportedVideoUrl && previewMode === 'video' ? (
                 <video
                   src={exportedVideoUrl}
                   controls
@@ -323,23 +429,59 @@ export function ExportScreen() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="p-6 text-center space-y-4 flex flex-col items-center justify-center h-full">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.15)]">
-                    <Sparkles className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-zinc-200 text-base">{t('export.previewPlaceholder')}</h4>
-                    <p className="text-zinc-400 text-xs mt-1.5 leading-relaxed">
-                      {t('export.previewPlaceholderDesc')}
-                    </p>
-                  </div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-400 font-mono">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    9:16 Vertical • {resolution === '1080p' ? '1080×1920' : '720×1280'}
-                  </div>
-                </div>
+                <CanvasPreview
+                  scene={scene}
+                  getCurrentTime={() => audio.engine.getCurrentTime()}
+                  isPlaying={audio.state.playbackState === 'playing' || isPreviewPlaying}
+                  className="w-full h-full object-contain"
+                />
               )}
+
+              {/* Fullscreen Button */}
+              <button
+                type="button"
+                onClick={() => setIsFullscreen(true)}
+                className="absolute top-3 right-3 z-10 p-2.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700/80 backdrop-blur-md cursor-pointer transition-all shadow-lg hover:scale-105"
+                title="Ver en pantalla completa"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+
+              {/* Mode indicator badge */}
+              <div className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded-full bg-zinc-950/80 border border-zinc-800/80 backdrop-blur-md text-[10px] font-mono text-zinc-300 flex items-center gap-1.5 shadow">
+                <span className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  exportedVideoUrl && previewMode === 'video' ? "bg-emerald-400" : "bg-blue-400 animate-pulse"
+                )} />
+                <span>{exportedVideoUrl && previewMode === 'video' ? 'Video MP4' : 'Vista Previa en vivo'}</span>
+              </div>
             </div>
+
+            {/* Toggle between Live Preview and Generated Video if exportedVideoUrl exists */}
+            {exportedVideoUrl && (
+              <div className="flex items-center gap-1 p-1 bg-zinc-950/80 rounded-xl border border-zinc-800 mt-3">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('live')}
+                  className={cn(
+                    "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                    previewMode === 'live' ? "bg-blue-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+                  )}
+                >
+                  Vista previa en vivo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('video')}
+                  className={cn(
+                    "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                    previewMode === 'video' ? "bg-emerald-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+                  )}
+                >
+                  Video MP4 generado
+                </button>
+              </div>
+            )}
 
             {/* Quick action button under video when completed */}
             {exportedVideoUrl && (
@@ -768,6 +910,87 @@ export function ExportScreen() {
           {t('export.backToPreview')}
         </Button>
       </div>
+
+      {/* Fullscreen Theater Modal in ExportScreen */}
+      {isFullscreen && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-between p-4 md:p-6 animate-in fade-in duration-200 select-none">
+          {/* Top Fullscreen Header */}
+          <div className="w-full max-w-5xl flex items-center justify-between z-10">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-bold text-white tracking-wide">
+                {project?.meta.title || 'Vista Previa de Exportación'}
+              </span>
+              <span className="text-xs text-zinc-400 font-mono">
+                {project?.meta.artist ? `• ${project.meta.artist}` : ''}
+              </span>
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300">
+                {exportedVideoUrl && previewMode === 'video' ? 'Video MP4' : 'Preview en vivo'}
+              </span>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsFullscreen(false)}
+              className="bg-zinc-900/90 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 text-xs h-9 px-3 rounded-xl cursor-pointer"
+            >
+              <Minimize2 className="w-4 h-4 mr-1.5 text-zinc-400" />
+              <span>Salir de Pantalla Completa (Esc)</span>
+            </Button>
+          </div>
+
+          {/* Centered 9:16 Cinematic Viewer */}
+          <div className="flex-1 min-h-0 w-full flex items-center justify-center py-2">
+            <div className="h-full aspect-[9/16] max-h-[84vh] rounded-2xl overflow-hidden border border-zinc-800 shadow-[0_0_80px_rgba(0,0,0,0.95)] bg-black relative flex items-center justify-center">
+              {exportedVideoUrl && previewMode === 'video' ? (
+                <video
+                  src={exportedVideoUrl}
+                  controls
+                  autoPlay
+                  loop
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <CanvasPreview
+                  scene={scene}
+                  getCurrentTime={() => audio.engine.getCurrentTime()}
+                  isPlaying={audio.state.playbackState === 'playing' || isPreviewPlaying}
+                  className="h-full w-full object-contain"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Bottom Floating Control Bar */}
+          <div className="w-full max-w-xl z-10 pt-2 flex flex-col items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleTogglePreviewAudio}
+              className={cn(
+                "h-9 px-4 text-xs font-semibold rounded-xl cursor-pointer transition-all",
+                isPreviewPlaying
+                  ? "bg-blue-600 text-white border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)] animate-pulse"
+                  : "bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border-zinc-700 hover:text-white"
+              )}
+            >
+              {isPreviewPlaying ? (
+                <>
+                  <Pause className="w-3.5 h-3.5 mr-1.5 text-white fill-white" />
+                  <span>Pausar escucha</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 mr-1.5 text-blue-400 fill-blue-400" />
+                  <span>Escuchar selección ({formatTime(exportStart)} - {formatTime(exportEnd)})</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

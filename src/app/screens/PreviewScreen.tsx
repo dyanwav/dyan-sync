@@ -11,7 +11,7 @@ import {
 import { TransportControls } from '@/features/audio';
 import { Button } from '@/shared/ui/button';
 import { cn } from '@/shared/utils/cn';
-import { ArrowRight, ChevronLeft } from 'lucide-react';
+import { ArrowRight, ChevronLeft, Maximize2, Minimize2 } from 'lucide-react';
 import type { ThemePreset } from '@/features/project/types';
 import { useTranslation } from '@/features/i18n';
 
@@ -31,6 +31,18 @@ export function PreviewScreen() {
   const { t } = useTranslation();
 
   const [customBgBitmap, setCustomBgBitmap] = useState<ImageBitmap | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Close fullscreen on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
 
   // Load custom photo bitmap whenever customImageDataUrl or contrast changes
   useEffect(() => {
@@ -148,6 +160,16 @@ export function PreviewScreen() {
               isPlaying={audio.state.playbackState === 'playing'} 
               className="h-full w-full object-contain"
             />
+
+            {/* Fullscreen Button */}
+            <button
+              type="button"
+              onClick={() => setIsFullscreen(true)}
+              className="absolute top-3 right-3 z-10 p-2.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700/80 backdrop-blur-md cursor-pointer transition-all shadow-lg hover:scale-105"
+              title="Ver en pantalla completa"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
@@ -283,6 +305,50 @@ export function PreviewScreen() {
           </div>
         </div>
       </footer>
+
+      {/* Fullscreen Theater Modal */}
+      {isFullscreen && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-between p-4 md:p-6 animate-in fade-in duration-200 select-none">
+          {/* Top Fullscreen Header */}
+          <div className="w-full max-w-5xl flex items-center justify-between z-10">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white tracking-wide">
+                {project?.meta.title || 'Vista Previa'}
+              </span>
+              <span className="text-xs text-zinc-400 font-mono">
+                {project?.meta.artist ? `• ${project.meta.artist}` : ''}
+              </span>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsFullscreen(false)}
+              className="bg-zinc-900/90 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 text-xs h-9 px-3 rounded-xl cursor-pointer"
+            >
+              <Minimize2 className="w-4 h-4 mr-1.5 text-zinc-400" />
+              <span>Salir de Pantalla Completa (Esc)</span>
+            </Button>
+          </div>
+
+          {/* Centered 9:16 Cinematic Viewer */}
+          <div className="flex-1 min-h-0 w-full flex items-center justify-center py-2">
+            <div className="h-full aspect-[9/16] max-h-[84vh] rounded-2xl overflow-hidden border border-zinc-800 shadow-[0_0_80px_rgba(0,0,0,0.95)] bg-black relative flex items-center justify-center">
+              <CanvasPreview 
+                scene={scene} 
+                getCurrentTime={() => audio.engine.getCurrentTime()} 
+                isPlaying={audio.state.playbackState === 'playing'} 
+                className="h-full w-full object-contain"
+              />
+            </div>
+          </div>
+
+          {/* Bottom Floating Minimal Player */}
+          <div className="w-full max-w-xl z-10 pt-2">
+            <TransportControls audio={audio} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

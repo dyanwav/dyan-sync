@@ -112,8 +112,8 @@ function calculateScrollY(lines: LyricLine[], activeIndex: number, t: number, la
   const currentLine = lines[activeIndex];
   const currentLayout = layout[activeIndex];
   
-  // Anchor target: ~35% from the top
-  const anchorY = height * 0.35;
+  // Anchor target: exactly centered in the frame vertically
+  const anchorY = (height / 2) - (currentLayout.totalHeight / 2);
   const currentTargetScroll = currentLayout.y - anchorY;
 
   // Animate scroll during 350ms (0.35s) window after line start
@@ -129,7 +129,8 @@ function calculateScrollY(lines: LyricLine[], activeIndex: number, t: number, la
     
     if (prevIndex >= 0) {
       const prevLayout = layout[prevIndex];
-      const prevTargetScroll = prevLayout.y - anchorY;
+      const prevAnchorY = (height / 2) - (prevLayout.totalHeight / 2);
+      const prevTargetScroll = prevLayout.y - prevAnchorY;
       
       const progress = Math.max(0, (t - start) / transitionDuration);
       const easedProgress = easeOutCubic(progress);
@@ -141,33 +142,72 @@ function calculateScrollY(lines: LyricLine[], activeIndex: number, t: number, la
   return currentTargetScroll;
 }
 
-function getLineStyle(index: number, activeIndex: number, lines: LyricLine[], t: number, lookaheadMs: number): { opacity: number, scale: number } {
+/**
+ * Calculates distance in vocal/sung lines between two indices (ignoring sections/blank lines)
+ */
+function getVocalLineDistance(lines: LyricLine[], fromIndex: number, toIndex: number): number {
+  if (fromIndex === toIndex) return 0;
+  const min = Math.min(fromIndex, toIndex);
+  const max = Math.max(fromIndex, toIndex);
+  let dist = 0;
+  for (let i = min + 1; i <= max; i++) {
+    if (lines[i].kind === 'lyric' && lines[i].text.trim() !== '') {
+      dist++;
+    }
+  }
+  return dist;
+}
+
+function getLineStyle(
+  index: number,
+  activeIndex: number,
+  lines: LyricLine[],
+  t: number,
+  lookaheadMs: number
+): { opacity: number; scale: number; blur: number } {
   const line = lines[index];
   const lookaheadSec = lookaheadMs / 1000;
   
   if (line.start === null) {
-    return { opacity: 0.2, scale: 1.0 };
+    return { opacity: 0.18, scale: 1.0, blur: 6.5 };
   }
 
-  if (index === activeIndex) {
-    // Determine if it's currently active or pre-highlighting
-    const start = line.start;
-    if (t >= start) {
-      return { opacity: 1.0, scale: 1.05 };
-    } else if (t >= start - lookaheadSec) {
-      return { opacity: 0.4, scale: 1.0 };
-    }
-    return { opacity: 0.4, scale: 1.0 };
-  } else if (index < activeIndex) {
-    return { opacity: 0.6, scale: 1.0 };
-  } else {
-    // Future lines
+  if (activeIndex < 0) {
     const start = line.start;
     if (t >= start - lookaheadSec) {
-      return { opacity: 0.4, scale: 1.0 };
+      return { opacity: 0.45, scale: 1.0, blur: 2.5 };
     }
-    return { opacity: 0.2, scale: 1.0 };
+    const isFirstVocal = lines.findIndex(l => l.kind === 'lyric' && l.text.trim() !== '') === index;
+    return isFirstVocal
+      ? { opacity: 0.45, scale: 1.0, blur: 2.5 }
+      : { opacity: 0, scale: 1.0, blur: 12 };
   }
+
+  const dist = getVocalLineDistance(lines, index, activeIndex);
+
+  // Active line: Centered, 100% sharp, bright luminous glow
+  if (dist === 0) {
+    const start = line.start;
+    if (t >= start) {
+      return { opacity: 1.0, scale: 1.05, blur: 0 };
+    } else if (t >= start - lookaheadSec) {
+      return { opacity: 0.85, scale: 1.02, blur: 0 };
+    }
+    return { opacity: 0.7, scale: 1.0, blur: 0 };
+  }
+
+  // Immediate previous or next line (±1): softly blurred and dimmed
+  if (dist === 1) {
+    return { opacity: 0.45, scale: 1.0, blur: 2.5 };
+  }
+
+  // Second previous or next line (±2): deeply blurred, fading into background
+  if (dist === 2) {
+    return { opacity: 0.18, scale: 1.0, blur: 6.5 };
+  }
+
+  // Third line and beyond (≥ 3): completely invisible
+  return { opacity: 0, scale: 1.0, blur: 12 };
 }
 
 function drawLine(
@@ -176,11 +216,12 @@ function drawLine(
   wrappedLines: string[],
   x: number,
   y: number,
-  options: { fontFamily: string, fontSize: number, opacity: number, lineHeight: number, width: number }
+  options: { fontFamily: string; fontSize: number; opacity: number; blur: number; lineHeight: number; width: number }
 ) {
+  if (options.opacity <= 0) return;
+
   ctx.save();
-  const isActive = options.opacity >= 0.9;
-  const isLookahead = options.opacity > 0.3 && !isActive;
+  const isActive = options.blur === 0 && options.opacity >= 0.85;
 
   ctx.font = `${isActive ? '800' : '700'} ${Math.round(options.fontSize)}px "${options.fontFamily}", system-ui, sans-serif`;
   ctx.fillStyle = isActive ? '#FFFFFF' : '#D4D4D8';
@@ -188,28 +229,31 @@ function drawLine(
   ctx.textBaseline = 'top';
   ctx.globalAlpha = options.opacity;
   
+  if (options.blur > 0) {
+    ctx.filter = `blur(${options.blur}px)`;
+  } else {
+    ctx.filter = 'none';
+  }
+
   if (isActive) {
     // Luminous double-pass glow
-    ctx.shadowColor = 'rgba(255, 255, 255, 0.7)';
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.75)';
     ctx.shadowBlur = 36;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
-  } else if (isLookahead) {
-    ctx.shadowColor = 'rgba(255, 255, 255, 0.25)';
-    ctx.shadowBlur = 18;
   } else {
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-    ctx.shadowBlur = 8;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 6;
   }
   
-  // Pass 1: Render glowing base for all wrapped lines
+  // Pass 1: Render glowing/blurred base for all wrapped lines
   let currentY = y;
   for (const line of wrappedLines) {
     ctx.fillText(line, x, currentY);
     currentY += options.fontSize * options.lineHeight;
   }
 
-  // Pass 2: Crisp overlay pass without shadow blur so text stays razor sharp
+  // Pass 2: Crisp overlay pass without shadow blur so active text stays razor sharp
   if (isActive) {
     ctx.shadowBlur = 0;
     ctx.shadowColor = 'transparent';
@@ -258,13 +302,19 @@ export function renderFrame(
   // 4. Calculate layout and positions with enhanced spacing
   const layout = calculateLayout(ctx, lines, width, height, fontFamily, fontSize, lineHeight);
   
-  // 5. Calculate scroll offset
+  // 5. Calculate scroll offset (centers active line vertically)
   const scrollY = calculateScrollY(lines, activeIndex, t, layout, height);
   
-  // 6. Draw each visible line
+  // 6. Draw each visible line (restricted to ±2 vocal distance)
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (line.kind === 'section') continue;
+    
+    // Quick skip if beyond distance 2
+    if (activeIndex >= 0) {
+      const dist = getVocalLineDistance(lines, i, activeIndex);
+      if (dist >= 3) continue;
+    }
     
     const lineLayout = layout[i];
     if (!lineLayout) continue;
@@ -275,13 +325,15 @@ export function renderFrame(
     if (drawY + lineLayout.totalHeight < -150 || drawY > height + 150) continue;
     
     // Determine line state and styling
-    const { opacity, scale } = getLineStyle(i, activeIndex, lines, t, lookaheadMs);
+    const { opacity, scale, blur } = getLineStyle(i, activeIndex, lines, t, lookaheadMs);
+    if (opacity <= 0) continue;
     
-    // Draw the line
+    // Draw the line with progressive blur
     drawLine(ctx, line.text, lineLayout.wrappedLines, width / 2, drawY, {
       fontFamily,
       fontSize: fontSize * scale,
       opacity,
+      blur,
       lineHeight,
       width,
     });

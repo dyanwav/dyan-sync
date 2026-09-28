@@ -38,7 +38,11 @@ export class AudioEngine {
   play(fromTime?: number): void {
     if (!this.audioBuffer) return;
     if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume();
+      this.audioContext.resume().then(() => {
+        if (this.clock.isPlaying) {
+          this.startedAt = this.audioContext.currentTime;
+        }
+      });
     }
     
     if (this.sourceNode) {

@@ -2,21 +2,25 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { AudioEngine } from '../engine';
 import type { AudioEngineState, PlaybackRate } from '../types';
 
+let globalAudioEngine: AudioEngine | null = null;
+
+function getSharedEngine(): AudioEngine {
+  if (!globalAudioEngine) {
+    globalAudioEngine = new AudioEngine();
+  }
+  return globalAudioEngine;
+}
+
 export function useAudioEngine() {
-  const engineRef = useRef<AudioEngine | null>(null);
+  const engine = getSharedEngine();
   const rAFRef = useRef<number | null>(null);
   
-  const [state, setState] = useState<AudioEngineState>({
-    playbackState: 'stopped',
-    duration: 0,
-    playbackRate: 1,
-    isLoaded: false,
-  });
-
-  if (!engineRef.current) {
-    engineRef.current = new AudioEngine();
-  }
-  const engine = engineRef.current;
+  const [state, setState] = useState<AudioEngineState>(() => ({
+    playbackState: engine.clock.isPlaying ? 'playing' : engine.clock.currentTime > 0 ? 'paused' : 'stopped',
+    duration: engine.getDuration(),
+    playbackRate: (engine.clock.playbackRate || 1) as PlaybackRate,
+    isLoaded: engine.getDuration() > 0,
+  }));
 
   useEffect(() => {
     let lastUiUpdate = performance.now();
@@ -37,18 +41,21 @@ export function useAudioEngine() {
         }
         
         setState(prev => {
+          const currentDur = engine.getDuration();
+          const currentRate = engine.clock.playbackRate as PlaybackRate;
+          const currentLoaded = currentDur > 0;
+          
           if (
             prev.playbackState !== newPlaybackState ||
-            prev.duration !== engine.getDuration() ||
-            prev.playbackRate !== engine.clock.playbackRate ||
-            prev.isLoaded !== !!engine.getDuration()
+            prev.duration !== currentDur ||
+            prev.playbackRate !== currentRate ||
+            prev.isLoaded !== currentLoaded
           ) {
             return {
-              ...prev,
               playbackState: newPlaybackState,
-              duration: engine.getDuration(),
-              playbackRate: engine.clock.playbackRate as PlaybackRate,
-              isLoaded: !!engine.getDuration(),
+              duration: currentDur,
+              playbackRate: currentRate,
+              isLoaded: currentLoaded,
             };
           }
           return prev;
@@ -67,32 +74,30 @@ export function useAudioEngine() {
     };
   }, [engine, state.playbackState]);
 
-  useEffect(() => {
-    return () => {
-      engine.dispose();
-    };
-  }, [engine]);
-
-  const loadAudio = useCallback(async (file: File) => {
-    await engine.loadAudio(file);
-    setState(prev => ({
-      ...prev,
-      duration: engine.getDuration(),
+  const loadAudio = useCallback(async (file: Blob | File) => {
+    const result = await engine.loadAudio(file);
+    setState({
+      duration: result.duration,
       isLoaded: true,
       playbackState: 'stopped',
-    }));
+      playbackRate: (engine.clock.playbackRate || 1) as PlaybackRate,
+    });
+    return result;
   }, [engine]);
 
   const play = useCallback((fromTime?: number) => {
     engine.play(fromTime);
+    setState(prev => ({ ...prev, playbackState: 'playing' }));
   }, [engine]);
 
   const pause = useCallback(() => {
     engine.pause();
+    setState(prev => ({ ...prev, playbackState: 'paused' }));
   }, [engine]);
 
   const stop = useCallback(() => {
     engine.stop();
+    setState(prev => ({ ...prev, playbackState: 'stopped' }));
   }, [engine]);
 
   const seek = useCallback((time: number) => {
@@ -105,7 +110,7 @@ export function useAudioEngine() {
   }, [engine]);
 
   const setVolume = useCallback((volume: number) => {
-      engine.setVolume(volume);
+    engine.setVolume(volume);
   }, [engine]);
 
   return {

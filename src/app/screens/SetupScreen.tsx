@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useProjectStore } from '@/features/project/store';
 import { useAudioEngine } from '@/features/audio';
 import { parseLyrics } from '@/features/sync';
+import { parseLrc } from '@/features/export';
+import { saveBlob } from '@/features/project/services/db';
 import { AudioDropzone } from '@/features/audio';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -17,30 +19,57 @@ export function SetupScreen() {
   
   const [lyricsInput, setLyricsInput] = useState('');
   
-  // When audio is loaded, we can auto-fill meta if we wanted, but we rely on the component for now
-  
-  // Also load lyrics into input if they exist in project
+  // Load lyrics into input if they exist in project
   useEffect(() => {
     if (project && project.lines.length > 0 && !lyricsInput) {
       setLyricsInput(project.lines.map(l => l.text).join('\n'));
     }
-  }, [project]);
+  }, [project, lyricsInput]);
 
   const handleAudioLoad = async (file: File) => {
-    await loadAudio(file);
-    // Note: AudioEngine currently doesn't parse ID3 tags in this MVP.
-    // If we wanted to, we would updateMeta here.
+    const res = await loadAudio(file);
+    if (project) {
+      saveBlob(project.id, file, file.name).catch(console.error);
+      const cleanedName = file.name.replace(/\.[^/.]+$/, '');
+      if (!project.meta.title) {
+        updateMeta({ title: cleanedName });
+      }
+      useProjectStore.setState((s) => {
+        if (s.project) {
+          s.project.audio = {
+            blobId: project.id,
+            name: file.name,
+            size: file.size,
+            duration: res.duration,
+          };
+          s.project.updatedAt = Date.now();
+        }
+      });
+    }
   };
 
   const handleLyricsImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const isLrc = file.name.toLowerCase().endsWith('.lrc');
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
       if (content) {
-        setLyricsInput(content);
+        if (isLrc) {
+          const parsed = parseLrc(content);
+          if (parsed.meta.title && !project?.meta.title) {
+            updateMeta({ title: parsed.meta.title });
+          }
+          if (parsed.meta.artist && !project?.meta.artist) {
+            updateMeta({ artist: parsed.meta.artist });
+          }
+          setLines(parsed.lines);
+          setLyricsInput(parsed.lines.map(l => l.text).join('\n'));
+        } else {
+          setLyricsInput(content);
+        }
       }
     };
     reader.readAsText(file);
@@ -55,9 +84,11 @@ export function SetupScreen() {
       return;
     }
     
-    // Parse lyrics and save to project
-    const lines = parseLyrics(lyricsInput);
-    setLines(lines);
+    // If lines weren't already parsed from LRC, parse plain text
+    if (project.lines.length === 0 || project.lines.map(l => l.text).join('\n') !== lyricsInput.trim()) {
+      const lines = parseLyrics(lyricsInput);
+      setLines(lines);
+    }
     
     setView('sync');
   };

@@ -1,16 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { useSyncStore } from '../store';
 
-export interface AudioEngine {
-  mapEventToAudioTime: (eventTime: number) => number;
-  play: () => void;
+export interface AudioEngineLike {
+  mapEventToAudioTime: (eventTimeStamp: number, tapOffsetMs: number) => number;
+  play: (fromTime?: number) => void;
   pause: () => void;
   seek: (time: number) => void;
   getCurrentTime: () => number;
+  clock?: { isPlaying: boolean };
 }
 
 export function useTapper(
-  engine: AudioEngine | null,
+  engine: AudioEngineLike | null,
   tapOffsetMs: number = -120,
   debounceMs: number = 70
 ) {
@@ -19,7 +20,7 @@ export function useTapper(
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if focus is in input
+      // Ignore if focus is in input or textarea
       const target = e.target as HTMLElement;
       if (
         target.tagName === 'INPUT' ||
@@ -31,15 +32,23 @@ export function useTapper(
 
       if (e.repeat) return;
 
-      // Handle shortcuts that work outside syncing mode
+      // Handle transport shortcuts
       if (e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        // Assume engine play/pause handling exists externally, or we just call engine methods if present.
-        // The prompt says "K: Play/Pause" in the Shortcuts panel. We can just emit a custom event or call engine if we know its state, but we don't.
+        if (engine) {
+          if (engine.clock?.isPlaying) {
+            engine.pause();
+          } else {
+            engine.play();
+          }
+        }
+        return;
       } else if (e.key.toLowerCase() === 'j') {
         if (engine) engine.seek(Math.max(0, engine.getCurrentTime() - 3));
+        return;
       } else if (e.key.toLowerCase() === 'l') {
         if (engine) engine.seek(engine.getCurrentTime() + 3);
+        return;
       }
 
       // Undo can work even if paused
@@ -58,13 +67,13 @@ export function useTapper(
       if (e.code === 'Space') {
         e.preventDefault();
         if (!engine) return;
-        const audioTime = engine.mapEventToAudioTime(now) + tapOffsetMs;
+        const audioTime = engine.mapEventToAudioTime(e.timeStamp, tapOffsetMs);
         tapLine(audioTime);
         lastTapRef.current = now;
       } else if (e.key.toLowerCase() === 'b') {
         e.preventDefault();
         if (!engine) return;
-        const audioTime = engine.mapEventToAudioTime(now) + tapOffsetMs;
+        const audioTime = engine.mapEventToAudioTime(e.timeStamp, tapOffsetMs);
         markSilence(audioTime);
         lastTapRef.current = now;
       } else if (e.key.toLowerCase() === 's') {

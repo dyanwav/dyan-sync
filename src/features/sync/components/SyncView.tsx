@@ -3,6 +3,7 @@ import { useSyncStore } from '../store';
 import { Button } from '@/shared/ui/button';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { cn } from '@/shared/utils/cn';
+import { formatTime } from '@/shared/utils/format-time';
 import { CheckCircle, Clock, SkipForward } from 'lucide-react';
 import { KeyboardShortcutsPanel } from './KeyboardShortcutsPanel';
 
@@ -125,9 +126,3 @@ export function SyncView() {
   );
 }
 
-function formatTime(ms: number): string {
-  const totalSeconds = Math.max(0, ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = (totalSeconds % 60).toFixed(2);
-  return `${minutes.toString().padStart(2, '0')}:${seconds.padStart(5, '0')}`;
-}

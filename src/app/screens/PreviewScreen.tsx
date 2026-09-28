@@ -1,6 +1,7 @@
+import { useMemo } from 'react';
 import { useProjectStore } from '@/features/project/store';
 import { useAudioEngine } from '@/features/audio';
-import { CanvasPreview, ThemeSelector } from '@/features/viewer';
+import { CanvasPreview, ThemeSelector, GRADIENT_PRESETS, createGradientBackground } from '@/features/viewer';
 import { TransportControls } from '@/features/audio';
 import { Button } from '@/shared/ui/button';
 import { ArrowRight } from 'lucide-react';
@@ -12,16 +13,26 @@ export function PreviewScreen() {
   const audio = useAudioEngine();
   const { t } = useTranslation();
 
+  const bgBitmap = useMemo(() => {
+    try {
+      const presetId = project?.settings.theme.preset || 'dark';
+      const preset = GRADIENT_PRESETS.find(p => p.id === presetId) || GRADIENT_PRESETS[0];
+      return createGradientBackground(preset, 800, 1422);
+    } catch {
+      return null;
+    }
+  }, [project?.settings.theme.preset]);
+
   const scene = {
     lines: project?.lines || [],
-    theme: project?.settings.theme || { preset: 'dark', fontFamily: 'Inter', fontSize: 24, lineSpacing: 1.5, lookaheadMs: 2000 },
-    background: null,
+    theme: project?.settings.theme || { preset: 'dark' as const, fontFamily: 'Inter', fontSize: 24, lineSpacing: 1.5, lookaheadMs: 200 },
+    background: bgBitmap,
     width: 800,
     height: 1422,
     fontFamily: project?.settings.theme.fontFamily || 'Inter',
     fontSize: project?.settings.theme.fontSize || 24,
     lineHeight: project?.settings.theme.lineSpacing || 1.5,
-    lookaheadMs: project?.settings.theme.lookaheadMs || 2000,
+    lookaheadMs: project?.settings.theme.lookaheadMs || 200,
   };
 
   const handleThemeSelect = (preset: string) => {

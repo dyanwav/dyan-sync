@@ -1,4 +1,8 @@
+import { useEffect, useState } from 'react';
 import { useProjectStore } from '@/features/project/store';
+import { listProjects, deleteProject, deleteBlob, loadBlob } from '@/features/project/services/db';
+import type { ProjectRecord } from '@/features/project/services/db';
+import { useAudioEngine } from '@/features/audio';
 import { Button } from '@/shared/ui/button';
 import { Plus, Music, Clock, Trash2, ChevronRight } from 'lucide-react';
 import { useTranslation } from '@/features/i18n';
@@ -6,11 +10,16 @@ import { useTranslation } from '@/features/i18n';
 export function HomeScreen() {
   const setProject = useProjectStore((s) => s.setProject);
   const setView = useProjectStore((s) => s.setView);
+  const audio = useAudioEngine();
   const { t } = useTranslation();
   
-  // In a real app, this would come from a database or localStorage listing
-  // For now we don't have persistence implemented for multiple projects in the requirements
-  const recentProjects: any[] = [];
+  const [recentProjects, setRecentProjects] = useState<ProjectRecord[]>([]);
+
+  useEffect(() => {
+    listProjects().then(records => {
+      setRecentProjects(records);
+    }).catch(console.error);
+  }, []);
 
   const handleNewProject = () => {
     setProject({
@@ -19,22 +28,53 @@ export function HomeScreen() {
       meta: { title: '', artist: '' },
       audio: { blobId: '', name: '', size: 0, duration: 0 },
       settings: {
-        tapOffsetMs: 0,
-        debounceMs: 50,
+        tapOffsetMs: -120,
+        debounceMs: 70,
         playbackRate: 1,
         theme: {
           preset: 'dark',
           fontFamily: 'Inter',
           fontSize: 24,
           lineSpacing: 1.5,
-          lookaheadMs: 2000,
+          lookaheadMs: 150,
         }
       },
       lines: [],
-      createdAt: Date.now(),
       updatedAt: Date.now(),
-    } as any);
+    });
     setView('setup');
+  };
+
+  const handleOpenProject = async (record: ProjectRecord) => {
+    const proj = record.data;
+    setProject(proj);
+    
+    // Restore audio from IndexedDB blob store if exists
+    if (proj.audio?.blobId) {
+      try {
+        const blob = await loadBlob(proj.audio.blobId);
+        if (blob) {
+          await audio.loadAudio(blob);
+        }
+      } catch (err) {
+        console.error('Failed to restore audio blob from IndexedDB:', err);
+      }
+    }
+    
+    if (proj.lines && proj.lines.length > 0 && proj.lines.some(l => l.start !== null)) {
+      setView('sync');
+    } else {
+      setView('setup');
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (window.confirm(t('home.deleteConfirm'))) {
+      await deleteProject(id);
+      await deleteBlob(id).catch(() => {});
+      setRecentProjects(prev => prev.filter(p => p.id !== id));
+    }
   };
 
   return (
@@ -72,48 +112,53 @@ export function HomeScreen() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {recentProjects.map((project) => (
-              <div 
-                key={project.id}
-                className="group relative flex flex-col justify-between p-5 rounded-xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl hover:bg-zinc-800/60 transition-all duration-300 cursor-pointer"
-                onClick={() => {
-                  setProject(project);
-                  setView('sync');
-                }}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-semibold text-zinc-100 truncate max-w-[200px]">
-                      {project.meta.title || 'Untitled'}
-                    </h3>
-                    <p className="text-sm text-zinc-400 truncate max-w-[200px]">
-                      {project.meta.artist || 'Unknown Artist'}
-                    </p>
+            {recentProjects.map((record) => {
+              const proj = record.data;
+              const syncedCount = proj.lines?.filter(l => l.start !== null).length || 0;
+              const totalCount = proj.lines?.length || 0;
+
+              return (
+                <div 
+                  key={record.id}
+                  className="group relative flex flex-col justify-between p-5 rounded-xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl hover:bg-zinc-800/60 transition-all duration-300 cursor-pointer"
+                  onClick={() => handleOpenProject(record)}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-semibold text-zinc-100 truncate max-w-[200px]">
+                        {proj.meta?.title || 'Untitled'}
+                      </h3>
+                      <p className="text-sm text-zinc-400 truncate max-w-[200px]">
+                        {proj.meta?.artist || 'Unknown Artist'}
+                      </p>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => handleDelete(e, record.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Delete logic
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  
+                  <div className="flex items-center justify-between text-xs text-zinc-500 mt-4">
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center">
+                        <Clock className="mr-1 h-3 w-3" />
+                        {new Date(proj.updatedAt || record.updatedAt).toLocaleDateString()}
+                      </span>
+                      {totalCount > 0 && (
+                        <span>{syncedCount}/{totalCount} {t('home.linesSync')}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center text-blue-400 group-hover:translate-x-1 transition-transform">
+                      {t('home.open')} <ChevronRight className="ml-1 h-3 w-3" />
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="flex items-center justify-between text-xs text-zinc-500 mt-4">
-                  <div className="flex items-center">
-                    <Clock className="mr-1 h-3 w-3" />
-                    {new Date(project.updatedAt).toLocaleDateString()}
-                  </div>
-                  <div className="flex items-center text-blue-400 group-hover:translate-x-1 transition-transform">
-                    Open <ChevronRight className="ml-1 h-3 w-3" />
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

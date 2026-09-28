@@ -17,7 +17,7 @@ export class AudioEngine {
     this.gainNode.connect(this.audioContext.destination);
   }
   
-  async loadAudio(file: File): Promise<{ duration: number; buffer: AudioBuffer }> {
+  async loadAudio(file: Blob | File): Promise<{ duration: number; buffer: AudioBuffer }> {
     if (file.size > 250 * 1024 * 1024) {
       console.warn('Audio file is very large (>250MB decoded equivalent). Performance may be impacted.');
     }
@@ -158,7 +158,7 @@ export class AudioEngine {
     
     const outputLatency = (this.audioContext as any).outputLatency ?? 0;
     
-    return audioTimeAtEvent - outputLatency + (tapOffsetMs / 1000);
+    return Math.max(0, audioTimeAtEvent - outputLatency + (tapOffsetMs / 1000));
   }
   
   calculatePeaks(samplesPerPixel: number): Float32Array {

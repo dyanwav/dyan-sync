@@ -8,20 +8,15 @@ function parseTimestamp(timeStr: string): number {
   const minutes = parseInt(parts[0], 10) || 0;
   const secondsStr = parts[1];
   const seconds = parseFloat(secondsStr) || 0;
-  return Math.floor((minutes * 60 + seconds) * 1000);
+  return Number((minutes * 60 + seconds).toFixed(3));
 }
 
-function formatTimestamp(ms: number): string {
-  const totalSeconds = Math.max(0, ms / 1000);
+function formatTimestamp(seconds: number): string {
+  const totalSeconds = Math.max(0, seconds);
   const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  // Pad minutes to 2 digits, seconds to 2 digits + 2 decimal places (centiseconds)
+  const remSec = totalSeconds % 60;
   const minStr = String(minutes).padStart(2, '0');
-  // seconds.toFixed(2) gives e.g. "05.12" or "12.34"
-  let secStr = seconds.toFixed(2);
-  if (secStr.indexOf('.') !== -1 && secStr.split('.')[0].length === 1) {
-    secStr = '0' + secStr;
-  }
+  const secStr = remSec.toFixed(2).padStart(5, '0');
   return `[${minStr}:${secStr}]`;
 }
 
@@ -119,7 +114,7 @@ export function exportLrc(
   if (meta.album) result.push(`[al:${meta.album}]`);
   
   if (options?.duration) {
-    const totalSeconds = Math.floor(options.duration / 1000);
+    const totalSeconds = Math.floor(options.duration);
     const m = Math.floor(totalSeconds / 60);
     const s = totalSeconds % 60;
     result.push(`[length:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}]`);

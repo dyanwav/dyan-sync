@@ -1,4 +1,5 @@
 import { useProjectStore } from '@/features/project/store';
+import { useAutoSave } from '@/features/project';
 import { HomeScreen } from './screens/HomeScreen';
 import { SetupScreen } from './screens/SetupScreen';
 import { SyncScreen } from './screens/SyncScreen';
@@ -10,6 +11,9 @@ import { LegalDisclaimer } from './components/LegalDisclaimer';
 function App() {
   const view = useProjectStore((s) => s.view);
   const hasAcceptedLegal = useProjectStore((s) => s.hasAcceptedLegal);
+  
+  // Activate automatic persistence to IndexedDB
+  useAutoSave();
   
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50 font-sans selection:bg-blue-500/30 selection:text-blue-200 overflow-x-hidden">

@@ -85,14 +85,14 @@ function calculateLayout(
 }
 
 function findActiveLineIndex(lines: LyricLine[], t: number, lookaheadMs: number): number {
+  const lookaheadSec = lookaheadMs / 1000;
   let activeIndex = -1;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (line.kind === 'section') continue;
+    if (line.kind === 'section' || line.start === null) continue;
     
-    const start = line.start ?? 0;
     // If the line has started, or is about to start (within lookahead)
-    if (t >= start - lookaheadMs) {
+    if (t >= line.start - lookaheadSec) {
       activeIndex = i;
     } else {
       break;
@@ -116,9 +116,8 @@ function calculateScrollY(lines: LyricLine[], activeIndex: number, t: number, la
   const anchorY = height * 0.35;
   const currentTargetScroll = currentLayout.y - anchorY;
 
-  // We want to animate the scroll starting at the active line's start time, 
-  // taking 350ms to reach the new anchor.
-  const transitionDuration = 350;
+  // Animate scroll during 350ms (0.35s) window after line start
+  const transitionDuration = 0.35;
   const start = currentLine.start ?? 0;
   
   if (t < start + transitionDuration) {
@@ -143,27 +142,32 @@ function calculateScrollY(lines: LyricLine[], activeIndex: number, t: number, la
 }
 
 function getLineStyle(index: number, activeIndex: number, lines: LyricLine[], t: number, lookaheadMs: number): { opacity: number, scale: number } {
+  const line = lines[index];
+  const lookaheadSec = lookaheadMs / 1000;
+  
+  if (line.start === null) {
+    return { opacity: 0.2, scale: 1.0 };
+  }
+
   if (index === activeIndex) {
     // Determine if it's currently active or pre-highlighting
-    const line = lines[index];
-    const start = line.start ?? 0;
+    const start = line.start;
     if (t >= start) {
       return { opacity: 1.0, scale: 1.05 };
-    } else if (t >= start - lookaheadMs) {
-      return { opacity: 0.35, scale: 1.0 };
+    } else if (t >= start - lookaheadSec) {
+      return { opacity: 0.4, scale: 1.0 };
     }
+    return { opacity: 0.4, scale: 1.0 };
   } else if (index < activeIndex) {
     return { opacity: 0.6, scale: 1.0 };
   } else {
     // Future lines
-    const line = lines[index];
-    const start = line.start ?? 0;
-    if (t >= start - lookaheadMs) {
-      return { opacity: 0.35, scale: 1.0 };
+    const start = line.start;
+    if (t >= start - lookaheadSec) {
+      return { opacity: 0.4, scale: 1.0 };
     }
     return { opacity: 0.2, scale: 1.0 };
   }
-  return { opacity: 0.2, scale: 1.0 };
 }
 
 function drawLine(

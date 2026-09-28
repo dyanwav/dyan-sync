@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import type { LyricLine } from '@/features/project/types';
+import { useProjectStore } from '@/features/project/store';
 
 export type SyncAction = {
   type: 'tap' | 'skip' | 'silence';
   lineId: string;
   timestamp: number;
-  previousState: { start: number | null; status: 'pending' | 'synced' | 'unassigned' };
+  previousState: { start: number | null; end: number | null; status: 'pending' | 'synced' | 'unassigned' };
 };
 
 export interface SyncState {
@@ -40,7 +41,9 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   countdownValue: null,
   lines: [],
 
-  setLines: (lines) => set({ lines, currentLineIndex: 0, syncHistory: [], mode: 'idle' }),
+  setLines: (lines) => {
+    set({ lines, currentLineIndex: 0, syncHistory: [], mode: 'idle' });
+  },
 
   startSync: () => set({ mode: 'countdown', countdownValue: 3 }),
 
@@ -60,17 +63,27 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     }
 
     const newLines = [...lines];
+    
+    // Set current line
     newLines[currentLineIndex] = {
       ...currentLine,
       start: audioTime,
       status: 'synced',
     };
 
+    // Close end of previous synced line
+    for (let i = currentLineIndex - 1; i >= 0; i--) {
+      if (newLines[i].status === 'synced') {
+        newLines[i] = { ...newLines[i], end: audioTime };
+        break;
+      }
+    }
+
     const action: SyncAction = {
       type: 'tap',
       lineId: currentLine.id,
       timestamp: audioTime,
-      previousState: { start: currentLine.start, status: currentLine.status },
+      previousState: { start: currentLine.start, end: currentLine.end, status: currentLine.status },
     };
 
     set({
@@ -78,6 +91,8 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       currentLineIndex: currentLineIndex + 1,
       syncHistory: [...syncHistory.slice(-49), action],
     });
+
+    useProjectStore.getState().setLines(newLines);
 
     if (currentLineIndex + 1 >= lines.length) {
       set({ mode: 'done' });
@@ -98,13 +113,15 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     const newLines = [...lines];
     
     if (lastAction.type === 'silence') {
-      // Silence adds a new empty line. So we remove it.
+      // Silence adds a new line; remove it
       newLines.splice(lineIndex, 1);
       set({ lines: newLines, syncHistory: newHistory });
+      useProjectStore.getState().setLines(newLines);
     } else {
       newLines[lineIndex] = {
         ...newLines[lineIndex],
         start: lastAction.previousState.start,
+        end: lastAction.previousState.end,
         status: lastAction.previousState.status,
       };
       set({
@@ -113,6 +130,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         syncHistory: newHistory,
         mode: get().mode === 'done' ? 'syncing' : get().mode
       });
+      useProjectStore.getState().setLines(newLines);
     }
   },
 
@@ -131,7 +149,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       type: 'skip',
       lineId: currentLine.id,
       timestamp: 0,
-      previousState: { start: currentLine.start, status: currentLine.status },
+      previousState: { start: currentLine.start, end: currentLine.end, status: currentLine.status },
     };
 
     set({
@@ -139,6 +157,8 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       currentLineIndex: currentLineIndex + 1,
       syncHistory: [...syncHistory.slice(-49), action],
     });
+
+    useProjectStore.getState().setLines(newLines);
 
     if (currentLineIndex + 1 >= lines.length) {
       set({ mode: 'done' });
@@ -154,17 +174,26 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       start: audioTime,
       end: null,
       status: 'synced',
-      kind: 'lyric'
+      kind: 'instrumental'
     };
 
     const newLines = [...lines];
+    
+    // Close end of previous synced line
+    for (let i = currentLineIndex - 1; i >= 0; i--) {
+      if (newLines[i].status === 'synced') {
+        newLines[i] = { ...newLines[i], end: audioTime };
+        break;
+      }
+    }
+
     newLines.splice(currentLineIndex, 0, silenceLine);
 
     const action: SyncAction = {
       type: 'silence',
       lineId: silenceLine.id,
       timestamp: audioTime,
-      previousState: { start: null, status: 'pending' },
+      previousState: { start: null, end: null, status: 'pending' },
     };
 
     set({
@@ -172,6 +201,8 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       currentLineIndex: currentLineIndex + 1,
       syncHistory: [...syncHistory.slice(-49), action],
     });
+
+    useProjectStore.getState().setLines(newLines);
   },
 
   pauseSync: () => set({ mode: 'paused' }),

@@ -6,7 +6,7 @@ import { formatTime } from '@/shared/utils/format-time';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { Pencil, Check, X, Clock, Trash2, RotateCcw, Target } from 'lucide-react';
+import { Pencil, Check, X, Clock, Trash2, RotateCcw, Target, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface LineItemProps {
   line: LyricLine;
@@ -16,7 +16,17 @@ interface LineItemProps {
 }
 
 export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
-  const { mode, updateLineText, nudgeLineTiming, setLineTiming, clearLineTiming, setCurrentLineIndex, syncFromLine } = useSyncStore();
+  const { 
+    mode, 
+    updateLineText, 
+    nudgeLineTiming, 
+    setLineTiming, 
+    clearLineTiming, 
+    setCurrentLineIndex, 
+    syncFromLine,
+    goToPreviousLine,
+    goToNextLine,
+  } = useSyncStore();
   const audio = useAudioEngine();
 
   const [isEditingText, setIsEditingText] = useState(false);
@@ -30,7 +40,7 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
     return (
       <div 
         key={line.id} 
-        className="pt-4 pb-1.5 px-3 text-xs font-mono font-bold tracking-widest uppercase text-blue-400/90 border-b border-zinc-800/60 flex items-center justify-between"
+        className="pt-6 pb-2 px-4 text-xs font-mono font-bold tracking-widest uppercase text-blue-400 border-b border-zinc-800/80 flex items-center justify-between"
       >
         <span>{line.text}</span>
         <span className="text-[10px] text-zinc-600 font-sans tracking-normal font-normal">Sección</span>
@@ -40,8 +50,8 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
 
   if (line.text === '') {
     return (
-      <div key={line.id} className="h-4 my-0.5 flex items-center justify-center opacity-30">
-        <div className="w-16 h-0.5 bg-zinc-700 rounded-full" />
+      <div key={line.id} className="h-6 my-1 flex items-center justify-center opacity-30">
+        <div className="w-24 h-0.5 bg-zinc-700 rounded-full" />
       </div>
     );
   }
@@ -88,6 +98,20 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
     }
   };
 
+  const handlePrevLine = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    goToPreviousLine((cueTime) => {
+      audio.engine.seek(cueTime);
+    });
+  };
+
+  const handleNextLine = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    goToNextLine((cueTime) => {
+      audio.engine.seek(cueTime);
+    });
+  };
+
   const handleSnapToPlayhead = (e: React.MouseEvent) => {
     e.stopPropagation();
     const current = audio.engine.getCurrentTime();
@@ -109,18 +133,22 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
       ref={isActive ? activeRef : null}
       onClick={handleLineClick}
       className={cn(
-        "group relative flex flex-col md:flex-row md:items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer border select-none",
+        "group relative flex flex-col md:flex-row md:items-center justify-between gap-3 px-5 py-3.5 rounded-2xl transition-all duration-200 cursor-pointer border select-none w-full",
         isActive
-          ? "bg-gradient-to-r from-blue-600/20 via-indigo-600/15 to-transparent border-blue-500/70 shadow-[0_0_25px_rgba(59,130,246,0.18)] ring-1 ring-blue-500/40"
+          ? "bg-gradient-to-r from-blue-600/25 via-indigo-600/15 to-transparent border-blue-500/80 shadow-[0_0_30px_rgba(59,130,246,0.22)] ring-1 ring-blue-500/50 scale-[1.005]"
           : isSynced
-          ? "bg-zinc-900/50 hover:bg-zinc-900/80 border-zinc-800/70 hover:border-zinc-700/80"
+          ? "bg-zinc-900/40 hover:bg-zinc-900/80 border-zinc-800/80 hover:border-zinc-700/80"
           : isSkipped
-          ? "bg-zinc-950/40 border-dashed border-zinc-800/40 opacity-50"
-          : "bg-transparent hover:bg-zinc-900/40 border-transparent hover:border-zinc-800/50 opacity-70 hover:opacity-100"
+          ? "bg-zinc-950/30 border-dashed border-zinc-800/50 opacity-40"
+          : "bg-transparent hover:bg-zinc-900/30 border-transparent hover:border-zinc-800/50 opacity-60 hover:opacity-100"
       )}
     >
-      {/* Left: Index + Text */}
+      {/* Left: Indicator, Index + Text */}
       <div className="flex items-center gap-3.5 flex-1 min-w-0">
+        {isActive && (
+          <div className="w-1.5 h-6 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.9)] shrink-0" />
+        )}
+
         <span className={cn(
           "font-mono text-xs shrink-0 w-6 text-center",
           isActive ? "text-blue-400 font-bold" : "text-zinc-600 font-medium"
@@ -138,23 +166,23 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
                 if (e.key === 'Escape') handleCancelText();
               }}
               autoFocus
-              className="h-8 text-sm bg-zinc-950 border-blue-500 text-white"
+              className="h-9 text-base bg-zinc-950 border-blue-500 text-white"
             />
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-emerald-400 hover:bg-emerald-500/20" onClick={handleSaveText}>
-              <Check className="h-3.5 w-3.5" />
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-400 hover:bg-emerald-500/20" onClick={handleSaveText}>
+              <Check className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-zinc-400 hover:bg-zinc-800" onClick={handleCancelText}>
-              <X className="h-3.5 w-3.5" />
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:bg-zinc-800" onClick={handleCancelText}>
+              <X className="h-4 w-4" />
             </Button>
           </div>
         ) : (
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <span className={cn(
-              "text-base md:text-lg tracking-tight truncate",
-              isActive ? "text-white font-extrabold" :
-              isSynced ? "text-zinc-100 font-semibold" :
-              isSkipped ? "text-zinc-500 line-through" :
-              "text-zinc-400 font-normal"
+              "tracking-tight truncate transition-all duration-150",
+              isActive ? "text-lg md:text-xl font-black text-white" :
+              isSynced ? "text-base md:text-lg font-medium text-zinc-200" :
+              isSkipped ? "text-base md:text-lg text-zinc-500 line-through" :
+              "text-base md:text-lg text-zinc-400 font-normal"
             )}>
               {line.text}
             </span>
@@ -165,7 +193,7 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
                 e.stopPropagation();
                 setIsEditingText(true);
               }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-zinc-500 hover:text-zinc-200 rounded shrink-0"
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-zinc-500 hover:text-zinc-200 rounded shrink-0"
               title="Editar texto de la línea"
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -174,29 +202,55 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
         )}
       </div>
 
-      {/* Right: Timestamp & Millisecond Fine-Tuning & Sync-from-here Controls */}
-      <div className="flex items-center gap-2 shrink-0 self-end md:self-auto" onClick={(e) => e.stopPropagation()}>
+      {/* Right: Timestamp & Controls */}
+      <div className="flex flex-wrap items-center gap-2 shrink-0 self-end md:self-auto" onClick={(e) => e.stopPropagation()}>
         {isActive && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
+          <div className="flex items-center gap-1.5 bg-blue-950/40 border border-blue-500/40 p-1 rounded-xl">
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">
               ACTIVA
             </span>
+
+            {/* Musixmatch Navigation on Active Line */}
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={handlePrevLine}
+              className="h-7 text-xs font-mono text-zinc-300 hover:text-white hover:bg-blue-500/20 px-2"
+              title="Línea anterior (-2.5s) (Atajo: ↑ o P)"
+            >
+              <ChevronUp className="h-3.5 w-3.5 mr-0.5 text-blue-400" />
+              Ant.
+            </Button>
+
             <Button
               type="button"
               size="sm"
               variant="ghost"
               onClick={handleRewindCurrent}
-              className="h-7 text-xs font-mono text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 px-2"
+              className="h-7 text-xs font-mono text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 px-2"
               title="Rebobinar 2.5s para volver a marcar esta línea (Atajo: R)"
             >
               <RotateCcw className="mr-1 h-3 w-3" />
               Re-marcar
             </Button>
+
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={handleNextLine}
+              className="h-7 text-xs font-mono text-zinc-300 hover:text-white hover:bg-blue-500/20 px-2"
+              title="Línea siguiente (Atajo: ↓ o N)"
+            >
+              Sig.
+              <ChevronDown className="h-3.5 w-3.5 ml-0.5 text-blue-400" />
+            </Button>
           </div>
         )}
 
         {isSynced && line.start !== null ? (
-          <div className="flex items-center gap-1.5 bg-zinc-950/80 p-1 rounded-lg border border-zinc-800">
+          <div className="flex items-center gap-1.5 bg-zinc-950/80 p-1 rounded-xl border border-zinc-800">
             {/* Fine Nudge Controls */}
             <div className="flex items-center gap-0.5">
               <button

@@ -1,7 +1,7 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { GRADIENT_PRESETS } from '../themes';
 import { cn } from '@/shared/utils/cn';
-import { ImagePlus, X, RefreshCw, Check } from 'lucide-react';
+import { ImagePlus, X, RefreshCw, Check, Loader2 } from 'lucide-react';
 
 interface ThemeSelectorProps {
   selectedThemeId: string;
@@ -10,6 +10,54 @@ interface ThemeSelectorProps {
   onUploadCustomImage?: (dataUrl: string) => void;
   onRemoveCustomImage?: () => void;
   className?: string;
+}
+
+function processUploadedImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      // Max target dimension (preserves quality for 1080x1920 9:16 export)
+      const maxW = 1080;
+      const maxH = 1920;
+      let targetW = img.width || 1;
+      let targetH = img.height || 1;
+
+      const scale = Math.min(1, Math.min(maxW / targetW, maxH / targetH));
+      targetW = Math.max(1, Math.round(targetW * scale));
+      targetH = Math.max(1, Math.round(targetH * scale));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        // Fallback: read directly as Data URL
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, targetW, targetH);
+      const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.90);
+      resolve(optimizedDataUrl);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    };
+
+    img.src = objectUrl;
+  });
 }
 
 export function ThemeSelector({
@@ -21,22 +69,24 @@ export function ThemeSelector({
   className,
 }: ThemeSelectorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
+    setIsProcessing(true);
+    try {
+      const dataUrl = await processUploadedImage(file);
       if (dataUrl && onUploadCustomImage) {
         onUploadCustomImage(dataUrl);
-        onSelect('custom');
       }
-    };
-    reader.readAsDataURL(file);
-    // Reset file input so same file can be re-selected if desired
-    e.target.value = '';
+    } catch (err) {
+      console.error('Error processing uploaded image:', err);
+    } finally {
+      setIsProcessing(false);
+      e.target.value = '';
+    }
   };
 
   return (
@@ -46,7 +96,7 @@ export function ThemeSelector({
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept="image/png,image/jpeg,image/webp,image/avif"
+        accept="image/*"
         className="hidden"
       />
 
@@ -57,7 +107,7 @@ export function ThemeSelector({
         </div>
 
         {customImageDataUrl ? (
-          <div className="flex items-center gap-3 bg-zinc-950/60 border border-zinc-800 p-2.5 rounded-xl">
+          <div className="flex items-center gap-3 bg-zinc-950/70 border border-zinc-800 p-2.5 rounded-xl">
             {/* Thumbnail */}
             <button
               type="button"
@@ -84,21 +134,27 @@ export function ThemeSelector({
             {/* Controls */}
             <div className="flex-1 min-w-0">
               <div className="text-xs font-bold text-zinc-200 truncate">Foto del usuario</div>
-              <div className="text-[11px] text-zinc-500 mt-0.5">Ajuste 9:16 + oscurecido automático</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Recorte 9:16 + oscurecido automático</div>
               <div className="flex gap-2 mt-2">
                 <button
                   type="button"
+                  disabled={isProcessing}
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-400 hover:text-blue-300 cursor-pointer"
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-400 hover:text-blue-300 cursor-pointer disabled:opacity-50"
                 >
-                  <RefreshCw className="w-3 h-3" />
-                  Cambiar
+                  {isProcessing ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3 h-3" />
+                  )}
+                  {isProcessing ? 'Procesando...' : 'Cambiar'}
                 </button>
                 {onRemoveCustomImage && (
                   <button
                     type="button"
+                    disabled={isProcessing}
                     onClick={onRemoveCustomImage}
-                    className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 hover:text-red-300 cursor-pointer ml-2"
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 hover:text-red-300 cursor-pointer ml-2 disabled:opacity-50"
                   >
                     <X className="w-3 h-3" />
                     Quitar
@@ -110,11 +166,16 @@ export function ThemeSelector({
         ) : (
           <button
             type="button"
+            disabled={isProcessing}
             onClick={() => fileInputRef.current?.click()}
-            className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border border-dashed border-zinc-700/80 bg-zinc-950/40 text-zinc-300 hover:text-white hover:border-blue-500/80 hover:bg-blue-600/10 transition-all text-xs font-semibold cursor-pointer shadow-sm"
+            className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border border-dashed border-zinc-700/80 bg-zinc-950/40 text-zinc-300 hover:text-white hover:border-blue-500/80 hover:bg-blue-600/10 transition-all text-xs font-semibold cursor-pointer shadow-sm disabled:opacity-50"
           >
-            <ImagePlus className="w-4 h-4 text-blue-400" />
-            <span>Subir imagen o foto de fondo</span>
+            {isProcessing ? (
+              <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+            ) : (
+              <ImagePlus className="w-4 h-4 text-blue-400" />
+            )}
+            <span>{isProcessing ? 'Procesando imagen...' : 'Subir imagen o foto de fondo'}</span>
           </button>
         )}
       </div>

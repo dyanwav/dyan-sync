@@ -60,7 +60,8 @@ export function PreviewScreen() {
     }
     try {
       const presetId = project?.settings.theme.preset || 'dark';
-      const preset = GRADIENT_PRESETS.find(p => p.id === presetId) || GRADIENT_PRESETS[0];
+      const actualPresetId = presetId === 'custom' ? 'dark' : presetId;
+      const preset = GRADIENT_PRESETS.find(p => p.id === actualPresetId) || GRADIENT_PRESETS[0];
       return createGradientBackground(preset, 800, 1422);
     } catch {
       return null;

@@ -37,6 +37,7 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
     return (
       <div 
         key={line.id} 
+        data-line-index={index}
         className="pt-6 pb-2 px-4 text-xs font-mono font-bold tracking-widest uppercase text-blue-400 border-b border-zinc-800/80 flex items-center justify-between"
       >
         <span>{line.text}</span>
@@ -47,7 +48,7 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
 
   if (line.text === '') {
     return (
-      <div key={line.id} className="h-6 my-1 flex items-center justify-center opacity-30">
+      <div key={line.id} data-line-index={index} className="h-6 my-1 flex items-center justify-center opacity-30">
         <div className="w-24 h-0.5 bg-zinc-700 rounded-full" />
       </div>
     );
@@ -120,6 +121,7 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
   return (
     <div
       ref={isActive ? activeRef : null}
+      data-line-index={index}
       onClick={handleLineClick}
       className={cn(
         "group relative flex items-center justify-between gap-4 px-4 py-3 rounded-2xl transition-all duration-200 cursor-pointer border select-none w-full",

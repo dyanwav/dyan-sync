@@ -155,27 +155,26 @@ export function createGradientBackground(
 
 /**
  * Creates a cinematic, 9:16 aspect ratio background from any user-uploaded image.
- * Automatically cover-fits the image (no distortion) and applies a darkening overlay
- * and vignette to ensure perfect lyric readability.
+ * Automatically cover-fits the image (no distortion, 100% full frame) and applies
+ * a multi-tier darkening overlay and vignette to ensure perfect lyric readability.
  */
 export async function createCustomPhotoBackground(
   imageSource: string | ImageBitmap | HTMLImageElement,
   width: number,
   height: number
 ): Promise<ImageBitmap> {
-  const canvas = typeof OffscreenCanvas !== 'undefined'
-    ? new OffscreenCanvas(width, height)
-    : document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
-
+  // 1. Load HTMLImageElement or use existing ImageBitmap
   let imgElement: HTMLImageElement | ImageBitmap;
   if (typeof imageSource === 'string') {
-    imgElement = new Image();
-    imgElement.crossOrigin = 'anonymous';
-    imgElement.src = imageSource;
-    await imgElement.decode();
+    imgElement = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      if (imageSource.startsWith('http://') || imageSource.startsWith('https://')) {
+        img.crossOrigin = 'anonymous';
+      }
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(new Error('Failed to load custom background image: ' + String(e)));
+      img.src = imageSource;
+    });
   } else {
     imgElement = imageSource;
   }
@@ -183,43 +182,65 @@ export async function createCustomPhotoBackground(
   const srcW = imgElement.width || 1;
   const srcH = imgElement.height || 1;
 
-  // 1. Cover fit (object-fit: cover) to preserve aspect ratio without stretching
+  // 2. Cover fit (object-fit: cover) to preserve aspect ratio without stretching
   const scale = Math.max(width / srcW, height / srcH);
   const drawW = srcW * scale;
   const drawH = srcH * scale;
   const dx = (width - drawW) / 2;
   const dy = (height - drawH) / 2;
 
+  const canvas = typeof OffscreenCanvas !== 'undefined'
+    ? new OffscreenCanvas(width, height)
+    : document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+
   // Base background fill
-  ctx.fillStyle = '#050505';
+  ctx.fillStyle = '#09090b';
   ctx.fillRect(0, 0, width, height);
 
-  // Draw user image
+  // Draw user image centered & cover-fitted
   ctx.drawImage(imgElement, dx, dy, drawW, drawH);
 
-  // 2. Base Darkening Tint (0.55 alpha)
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  // 3. Multi-layer Darkening & Contrast Overlay:
+  // Layer A: Base Darkening Tint (0.64 alpha)
+  ctx.fillStyle = 'rgba(9, 9, 11, 0.64)';
   ctx.fillRect(0, 0, width, height);
 
-  // 3. Dynamic Center Overlay for lyrics readability
+  // Layer B: Vertical Readability Gradient
   const lyricOverlay = ctx.createLinearGradient(0, 0, 0, height);
-  lyricOverlay.addColorStop(0, 'rgba(0, 0, 0, 0.7)');
-  lyricOverlay.addColorStop(0.25, 'rgba(0, 0, 0, 0.4)');
-  lyricOverlay.addColorStop(0.5, 'rgba(0, 0, 0, 0.45)');
-  lyricOverlay.addColorStop(0.75, 'rgba(0, 0, 0, 0.6)');
-  lyricOverlay.addColorStop(1, 'rgba(0, 0, 0, 0.85)');
+  lyricOverlay.addColorStop(0, 'rgba(0, 0, 0, 0.78)');
+  lyricOverlay.addColorStop(0.2, 'rgba(0, 0, 0, 0.45)');
+  lyricOverlay.addColorStop(0.38, 'rgba(0, 0, 0, 0.35)'); // Sweet spot for active line
+  lyricOverlay.addColorStop(0.65, 'rgba(0, 0, 0, 0.55)');
+  lyricOverlay.addColorStop(1, 'rgba(0, 0, 0, 0.88)');
   ctx.fillStyle = lyricOverlay;
   ctx.fillRect(0, 0, width, height);
 
-  // 4. Subtle Vignette edges for cinematic depth
+  // Layer C: Ambient dark shadow orb behind active lyrics reading area
+  const readingGlow = ctx.createRadialGradient(
+    width * 0.5, height * 0.38,
+    0,
+    width * 0.5, height * 0.38,
+    width * 0.55
+  );
+  readingGlow.addColorStop(0, 'rgba(0, 0, 0, 0.45)');
+  readingGlow.addColorStop(0.6, 'rgba(0, 0, 0, 0.2)');
+  readingGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = readingGlow;
+  ctx.fillRect(0, 0, width, height);
+
+  // Layer D: Subtle Vignette edges for cinematic depth
   const vignette = ctx.createRadialGradient(
     width * 0.5, height * 0.5,
-    height * 0.25,
+    height * 0.22,
     width * 0.5, height * 0.5,
-    height * 0.75
+    height * 0.76
   );
   vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  vignette.addColorStop(1, 'rgba(0, 0, 0, 0.75)');
+  vignette.addColorStop(0.55, 'rgba(0, 0, 0, 0.4)');
+  vignette.addColorStop(1, 'rgba(0, 0, 0, 0.88)');
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, width, height);
 

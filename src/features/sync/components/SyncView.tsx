@@ -50,23 +50,45 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const activeLineRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll active line to vertical center with buttery smooth container scrolling
-  useEffect(() => {
-    if (activeLineRef.current && scrollContainerRef.current) {
-      const container = scrollContainerRef.current;
-      const el = activeLineRef.current;
-      
-      const containerRect = container.getBoundingClientRect();
-      const elRect = el.getBoundingClientRect();
-      
-      const currentScrollTop = container.scrollTop;
-      const elRelativeTop = elRect.top - containerRect.top + currentScrollTop;
-      const targetScroll = elRelativeTop - (container.clientHeight / 2) + (elRect.height / 2);
+  // Buttery-smooth rAF scroll animator with cubic ease-out
+  const smoothScrollTo = (container: HTMLElement, targetTop: number, durationMs = 340) => {
+    const startTop = container.scrollTop;
+    const distance = targetTop - startTop;
+    if (Math.abs(distance) < 2) return;
 
-      container.scrollTo({
-        top: Math.max(0, targetScroll),
-        behavior: 'smooth'
-      });
+    const startTime = performance.now();
+
+    if ((container as any)._scrollAnimId) {
+      cancelAnimationFrame((container as any)._scrollAnimId);
+    }
+
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / durationMs);
+      // Cubic ease out curve
+      const ease = 1 - Math.pow(1 - progress, 3);
+      container.scrollTop = startTop + distance * ease;
+
+      if (progress < 1) {
+        (container as any)._scrollAnimId = requestAnimationFrame(step);
+      } else {
+        (container as any)._scrollAnimId = null;
+      }
+    };
+
+    (container as any)._scrollAnimId = requestAnimationFrame(step);
+  };
+
+  // Auto-scroll active line to vertical center smoothly without jumps
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+    const container = scrollContainerRef.current;
+    
+    // Find active element reliably via data-line-index attribute
+    const el = container.querySelector<HTMLElement>(`[data-line-index="${currentLineIndex}"]`);
+    if (el) {
+      const targetScroll = el.offsetTop - (container.clientHeight / 2) + (el.clientHeight / 2);
+      smoothScrollTo(container, Math.max(0, targetScroll), 340);
     }
   }, [currentLineIndex]);
 

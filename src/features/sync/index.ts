@@ -6,4 +6,6 @@ export * from './components/SyncView';
 export * from './components/CountdownOverlay';
 export * from './components/CalibrationWizard';
 export * from './components/KeyboardShortcutsPanel';
+export * from './components/LineItem';
+export * from './components/EditLyricsModal';
 export * from './utils/parse-lyrics';

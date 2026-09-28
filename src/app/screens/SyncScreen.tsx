@@ -6,7 +6,7 @@ import { SyncView, CountdownOverlay, CalibrationWizard } from '@/features/sync';
 import { TransportControls } from '@/features/audio';
 import { CanvasPreview, GRADIENT_PRESETS, createGradientBackground } from '@/features/viewer';
 import { Button } from '@/shared/ui/button';
-import { ArrowRight, Settings2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useTranslation } from '@/features/i18n';
 
 export function SyncScreen() {
@@ -85,18 +85,8 @@ export function SyncScreen() {
         
         {/* Left Panel: Sync View */}
         <div className="flex-[3] flex flex-col min-h-0 rounded-xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl overflow-hidden relative">
-          <SyncView />
+          <SyncView onOpenCalibration={() => setShowCalibration(true)} />
           <CountdownOverlay onComplete={() => audio.play()} />
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowCalibration(true)}
-            className="absolute top-4 right-4 bg-zinc-950/80 border-zinc-800 text-zinc-400 hover:text-zinc-100 z-10"
-          >
-            <Settings2 className="mr-2 h-4 w-4" />
-            {t('sync.calibrate')}
-          </Button>
         </div>
 
         {/* Right Panel: Preview & Info */}

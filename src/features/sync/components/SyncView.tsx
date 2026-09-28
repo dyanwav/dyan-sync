@@ -1,21 +1,27 @@
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSyncStore } from '../store';
 import { useProjectStore } from '@/features/project/store';
 import { useAudioEngine } from '@/features/audio';
 import { Button } from '@/shared/ui/button';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { cn } from '@/shared/utils/cn';
-import { formatTime } from '@/shared/utils/format-time';
-import { CheckCircle, Clock, SkipForward, Undo2, VolumeX, FastForward, Play, Pause } from 'lucide-react';
+import { Undo2, VolumeX, FastForward, Play, Pause, FileEdit, Settings2 } from 'lucide-react';
 import { KeyboardShortcutsPanel } from './KeyboardShortcutsPanel';
+import { LineItem } from './LineItem';
+import { EditLyricsModal } from './EditLyricsModal';
 import { useTranslation } from '@/features/i18n';
 
-export function SyncView() {
+interface SyncViewProps {
+  onOpenCalibration?: () => void;
+}
+
+export function SyncView({ onOpenCalibration }: SyncViewProps) {
   const { lines, currentLineIndex, mode, startSync, pauseSync, resumeSync, tapLine, undoLastTap, skipLine, markSilence } = useSyncStore();
   const project = useProjectStore((s) => s.project);
   const audio = useAudioEngine();
   const { t } = useTranslation();
   
+  const [showEditModal, setShowEditModal] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeLineRef = useRef<HTMLDivElement>(null);
 
@@ -76,8 +82,8 @@ export function SyncView() {
 
   return (
     <div className="flex flex-col h-full bg-zinc-950 text-zinc-100 p-6 gap-6 font-sans">
-      {/* Header bar */}
-      <div className="flex justify-between items-center">
+      {/* Header bar with controls and actions */}
+      <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold font-heading tracking-tight text-white flex items-center gap-3">
             <span>{t('sync.title')}</span>
@@ -89,7 +95,33 @@ export function SyncView() {
             {t('sync.progress', { synced: syncedCount, total: totalLyrics })}
           </p>
         </div>
-        <div className="flex gap-3">
+
+        {/* Toolbar Buttons: Start/Pause, Edit Lyrics, Calibrate */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowEditModal(true)}
+            className="bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800"
+          >
+            <FileEdit className="mr-2 h-4 w-4 text-blue-400" />
+            Editar Letras
+          </Button>
+
+          {onOpenCalibration && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onOpenCalibration}
+              className="bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800"
+            >
+              <Settings2 className="mr-2 h-4 w-4 text-zinc-400" />
+              {t('sync.calibrate')}
+            </Button>
+          )}
+
           {mode === 'idle' || mode === 'done' ? (
             <Button 
               onClick={startSync} 
@@ -121,85 +153,26 @@ export function SyncView() {
         </div>
       </div>
 
-      <div className="flex gap-6 flex-1 min-h-0">
+      <div className="flex flex-col md:flex-row gap-6 flex-1 min-h-0">
         {/* Main Lyrics Column */}
         <div className="flex-1 border border-zinc-800/80 rounded-xl overflow-hidden bg-zinc-900/40 backdrop-blur-xl relative">
           <ScrollArea className="h-full w-full p-4" ref={scrollRef}>
-            <div className="flex flex-col gap-2.5 pb-20">
-              {lines.map((line, index) => {
-                const isActive = index === currentLineIndex;
-                const isSynced = line.status === 'synced';
-                const isSkipped = line.status === 'unassigned';
-                const isSection = line.kind === 'section';
-
-                if (isSection) {
-                  return (
-                    <div 
-                      key={line.id} 
-                      className="pt-4 pb-1 px-3 text-xs font-mono font-bold tracking-widest uppercase text-blue-400/80 border-b border-zinc-800/50"
-                    >
-                      {line.text}
-                    </div>
-                  );
-                }
-
-                if (line.text === '') {
-                  return (
-                    <div key={line.id} className="h-3 my-0.5 flex items-center justify-center opacity-30">
-                      <div className="w-12 h-0.5 bg-zinc-700 rounded-full" />
-                    </div>
-                  );
-                }
-
-                return (
-                  <div
-                    key={line.id}
-                    ref={isActive ? activeLineRef : null}
-                    className={cn(
-                      "flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 border-l-4",
-                      isActive
-                        ? "border-blue-500 bg-gradient-to-r from-blue-500/20 via-blue-500/10 to-transparent shadow-[0_0_20px_rgba(59,130,246,0.15)] ring-1 ring-blue-500/30"
-                        : isSynced
-                        ? "border-emerald-500/60 bg-emerald-500/5 hover:bg-emerald-500/10"
-                        : "border-transparent hover:bg-zinc-800/40 opacity-70"
-                    )}
-                  >
-                    <div className="w-7 flex justify-center text-zinc-500 shrink-0">
-                      {isSynced ? (
-                        <CheckCircle className="w-5 h-5 text-emerald-400 animate-in zoom-in-75 duration-200" />
-                      ) : isSkipped ? (
-                        <SkipForward className="w-5 h-5 text-amber-400" />
-                      ) : (
-                        <Clock className="w-5 h-5 text-zinc-600" />
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <span className={cn(
-                        "text-base md:text-lg tracking-tight block truncate",
-                        isActive ? "text-white font-bold tracking-normal" :
-                        isSynced ? "text-zinc-200 font-medium" :
-                        isSkipped ? "text-amber-400/80 line-through" :
-                        "text-zinc-400"
-                      )}>
-                        {line.text}
-                      </span>
-                    </div>
-
-                    {line.start !== null && (
-                      <div className="text-xs font-mono font-semibold px-2 py-1 rounded bg-zinc-800/80 text-emerald-400/90 border border-zinc-700/60 shrink-0">
-                        {formatTime(line.start)}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="flex flex-col gap-2 pb-24 md:pb-12">
+              {lines.map((line, index) => (
+                <LineItem
+                  key={line.id}
+                  line={line}
+                  index={index}
+                  isActive={index === currentLineIndex}
+                  activeRef={activeLineRef}
+                />
+              ))}
             </div>
           </ScrollArea>
         </div>
 
         {/* Side Control Panel */}
-        <div className="w-80 flex flex-col gap-4 shrink-0">
+        <div className="w-full md:w-80 flex flex-col gap-4 shrink-0">
           {/* Active Phrase Hero Card */}
           <div className="bg-gradient-to-b from-zinc-900/90 to-zinc-950 border border-zinc-800/90 rounded-xl p-5 flex flex-col gap-3 shadow-xl backdrop-blur-xl">
             <div className="flex items-center justify-between">
@@ -217,7 +190,7 @@ export function SyncView() {
             </div>
           </div>
 
-          {/* Big Tactile TAP Button */}
+          {/* Big Tactile TAP Button for Desktop & Tablets */}
           <button
             type="button"
             onClick={handleTap}
@@ -234,7 +207,7 @@ export function SyncView() {
               {mode === 'syncing' ? 'MARCAR LÍNEA' : mode === 'paused' ? 'REANUDAR' : 'EMPEZAR SYNC'}
             </span>
             <span className="text-xs font-mono font-medium px-3 py-0.5 rounded-full bg-black/40 text-white/80 border border-white/10">
-              Presiona Espacio
+              Presiona Espacio o Haz Clic
             </span>
           </button>
 
@@ -278,11 +251,54 @@ export function SyncView() {
           </div>
 
           {/* Shortcuts Panel */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto hidden md:block">
             <KeyboardShortcutsPanel />
           </div>
         </div>
       </div>
+
+      {/* Floating Bottom Tap Bar for Phones / Mobile Touch */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 p-3 bg-zinc-950/95 backdrop-blur-2xl border-t border-zinc-800/90 flex items-center gap-2.5 z-40 shadow-2xl">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleUndo}
+          className="bg-zinc-900 border-zinc-800 text-zinc-300 h-14 px-4 shrink-0"
+          title="Deshacer"
+        >
+          <Undo2 className="h-5 w-5 text-amber-400" />
+        </Button>
+
+        <button
+          type="button"
+          onClick={handleTap}
+          className={cn(
+            "flex-1 h-14 rounded-xl text-white font-extrabold text-base transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 border cursor-pointer select-none",
+            mode === 'syncing'
+              ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 border-white/30 shadow-[0_0_20px_rgba(79,70,229,0.4)]"
+              : mode === 'paused'
+              ? "bg-gradient-to-r from-amber-600 to-orange-600 border-white/20"
+              : "bg-gradient-to-r from-zinc-800 to-zinc-700 border-zinc-600"
+          )}
+        >
+          <span>{mode === 'syncing' ? 'TAP (SIGUIENTE)' : mode === 'paused' ? 'REANUDAR' : 'EMPEZAR'}</span>
+        </button>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleSilence}
+          className="bg-zinc-900 border-zinc-800 text-zinc-300 h-14 px-4 shrink-0"
+          title="Silencio"
+        >
+          <VolumeX className="h-5 w-5 text-purple-400" />
+        </Button>
+      </div>
+
+      {/* Edit Lyrics Modal */}
+      <EditLyricsModal open={showEditModal} onOpenChange={setShowEditModal} />
     </div>
   );
 }

@@ -31,6 +31,10 @@ export interface SyncState {
   setCountdownValue: (val: number | null) => void;
   setMode: (mode: SyncState['mode']) => void;
   setCalibrated: (val: boolean) => void;
+  updateLineText: (id: string, text: string) => void;
+  nudgeLineTiming: (id: string, deltaSeconds: number) => void;
+  setLineTiming: (id: string, startSeconds: number) => void;
+  clearLineTiming: (id: string) => void;
 }
 
 export const useSyncStore = create<SyncState>((set, get) => ({
@@ -236,4 +240,70 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   setCountdownValue: (val) => set({ countdownValue: val }),
   setMode: (mode) => set({ mode }),
   setCalibrated: (val) => set({ isCalibrated: val }),
+
+  updateLineText: (id, text) => {
+    const { lines } = get();
+    const newLines = lines.map(l => l.id === id ? { ...l, text } : l);
+    set({ lines: newLines });
+    useProjectStore.getState().setLines(newLines);
+  },
+
+  nudgeLineTiming: (id, deltaSeconds) => {
+    const { lines } = get();
+    const newLines = lines.map(l => {
+      if (l.id === id) {
+        const currentStart = l.start ?? 0;
+        const newStart = Math.max(0, Number((currentStart + deltaSeconds).toFixed(3)));
+        return { ...l, start: newStart, status: 'synced' as const };
+      }
+      return l;
+    });
+
+    // Re-derive end times for synced lines
+    for (let i = 0; i < newLines.length; i++) {
+      if (newLines[i].status === 'synced' && newLines[i].start !== null) {
+        let nextStart: number | null = null;
+        for (let j = i + 1; j < newLines.length; j++) {
+          if (newLines[j].start !== null) {
+            nextStart = newLines[j].start;
+            break;
+          }
+        }
+        newLines[i] = { ...newLines[i], end: nextStart };
+      }
+    }
+
+    set({ lines: newLines });
+    useProjectStore.getState().setLines(newLines);
+  },
+
+  setLineTiming: (id, startSeconds) => {
+    const { lines } = get();
+    const validStart = Math.max(0, Number(startSeconds.toFixed(3)));
+    const newLines = lines.map(l => l.id === id ? { ...l, start: validStart, status: 'synced' as const } : l);
+
+    // Re-derive end times
+    for (let i = 0; i < newLines.length; i++) {
+      if (newLines[i].status === 'synced' && newLines[i].start !== null) {
+        let nextStart: number | null = null;
+        for (let j = i + 1; j < newLines.length; j++) {
+          if (newLines[j].start !== null) {
+            nextStart = newLines[j].start;
+            break;
+          }
+        }
+        newLines[i] = { ...newLines[i], end: nextStart };
+      }
+    }
+
+    set({ lines: newLines });
+    useProjectStore.getState().setLines(newLines);
+  },
+
+  clearLineTiming: (id) => {
+    const { lines } = get();
+    const newLines = lines.map(l => l.id === id ? { ...l, start: null, end: null, status: 'pending' as const } : l);
+    set({ lines: newLines });
+    useProjectStore.getState().setLines(newLines);
+  },
 }));

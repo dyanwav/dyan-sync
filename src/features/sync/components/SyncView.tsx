@@ -55,6 +55,54 @@ export function SyncView({ onOpenCalibration, onContinueToPreview }: SyncViewPro
     }
   }, [currentLineIndex]);
 
+  // Auto-follow active line in real time as audio plays or seeks
+  useEffect(() => {
+    let rAF: number;
+    let lastCheckedTime = -1;
+
+    const followPlayback = () => {
+      if (audio.engine) {
+        const currentTime = audio.engine.getCurrentTime();
+
+        if (Math.abs(currentTime - lastCheckedTime) > 0.04) {
+          lastCheckedTime = currentTime;
+
+          // Find the synced line currently active at currentTime
+          let matchedIdx: number | null = null;
+          for (let i = 0; i < lines.length; i++) {
+            const l = lines[i];
+            if (l.kind === 'section' || l.text === '') continue;
+            if (l.start !== null && l.start <= currentTime + 0.03) {
+              matchedIdx = i;
+            } else if (l.start !== null && l.start > currentTime + 0.03) {
+              break;
+            }
+          }
+
+          if (matchedIdx !== null && matchedIdx !== useSyncStore.getState().currentLineIndex) {
+            // When in syncing mode, only auto-advance through already synced lines or if audio seeked
+            if (mode === 'syncing') {
+              const currentLine = lines[useSyncStore.getState().currentLineIndex];
+              if (currentLine && currentLine.status === 'pending' && currentLine.start === null) {
+                if (matchedIdx < useSyncStore.getState().currentLineIndex) {
+                  useSyncStore.getState().setCurrentLineIndex(matchedIdx);
+                }
+              } else {
+                useSyncStore.getState().setCurrentLineIndex(matchedIdx);
+              }
+            } else {
+              useSyncStore.getState().setCurrentLineIndex(matchedIdx);
+            }
+          }
+        }
+      }
+      rAF = requestAnimationFrame(followPlayback);
+    };
+
+    rAF = requestAnimationFrame(followPlayback);
+    return () => cancelAnimationFrame(rAF);
+  }, [audio.engine, lines, mode]);
+
   const syncedCount = lines.filter(l => l.status === 'synced').length;
   const totalLyrics = lines.filter(l => l.kind === 'lyric' && l.text !== '').length;
   const progressPercent = totalLyrics > 0 ? Math.round((syncedCount / totalLyrics) * 100) : 0;

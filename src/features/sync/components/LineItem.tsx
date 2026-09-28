@@ -132,18 +132,11 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
           : "bg-transparent hover:bg-zinc-900/30 border-transparent hover:border-zinc-800/50 opacity-60 hover:opacity-100"
       )}
     >
-      {/* Left: Indicator, Index + Timing cluster [-] timestamp [+] [>] */}
+      {/* Left: Indicator + Timing cluster [-] timestamp [+] [>] */}
       <div className="flex items-center gap-3 shrink-0">
         {isActive && (
           <div className="w-1.5 h-6 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.9)] shrink-0" />
         )}
-
-        <span className={cn(
-          "font-mono text-xs w-6 text-center shrink-0",
-          isActive ? "text-blue-400 font-bold" : "text-zinc-600 font-medium"
-        )}>
-          {String(index + 1).padStart(2, '0')}
-        </span>
 
         {/* Timing cluster: [-] timestamp [+] [>] */}
         <div className="flex items-center bg-zinc-950/90 rounded-xl border border-zinc-800 p-0.5 shadow-inner">
@@ -257,13 +250,6 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
           </div>
         )}
       </div>
-
-      {/* Right Indicator (Active badge) */}
-      {isActive && (
-        <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 shrink-0">
-          ACTIVA
-        </span>
-      )}
     </div>
   );
 }

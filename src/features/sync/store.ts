@@ -331,8 +331,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
     const targetLine = lines[targetIdx];
     if (targetLine && targetLine.start !== null) {
-      const cueTime = Math.max(0, Number((targetLine.start - 2.5).toFixed(3)));
-      if (seekCallback) seekCallback(cueTime);
+      if (seekCallback) seekCallback(targetLine.start);
     } else {
       let prevSyncedStart: number | null = null;
       for (let i = targetIdx - 1; i >= 0; i--) {
@@ -342,7 +341,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         }
       }
       if (prevSyncedStart !== null && seekCallback) {
-        seekCallback(Math.max(0, Number((prevSyncedStart - 1).toFixed(3))));
+        seekCallback(prevSyncedStart);
       }
     }
   },
@@ -362,7 +361,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
     const targetLine = lines[targetIdx];
     if (targetLine && targetLine.start !== null && seekCallback) {
-      seekCallback(Math.max(0, Number((targetLine.start - 1.5).toFixed(3))));
+      seekCallback(targetLine.start);
     }
   },
 
@@ -375,8 +374,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
     const targetLine = lines[targetIndex];
     if (targetLine && targetLine.start !== null) {
-      const cueTime = Math.max(0, Number((targetLine.start - 2.5).toFixed(3)));
-      if (seekCallback) seekCallback(cueTime);
+      if (seekCallback) seekCallback(targetLine.start);
     } else {
       let prevSyncedStart: number | null = null;
       for (let i = targetIndex - 1; i >= 0; i--) {

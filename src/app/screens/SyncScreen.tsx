@@ -35,9 +35,9 @@ export function SyncScreen() {
     }
   }, [project?.id]);
 
-  // Pause audio if sync is paused
+  // Pause audio if sync is paused or in countdown
   useEffect(() => {
-    if (mode === 'paused') {
+    if (mode === 'paused' || mode === 'countdown') {
       audio.pause();
     }
   }, [mode, audio]);

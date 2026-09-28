@@ -1,15 +1,17 @@
-
 export function KeyboardShortcutsPanel() {
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 flex flex-col gap-4">
-      <h3 className="text-zinc-400 text-sm font-semibold uppercase tracking-wider">Keyboard Shortcuts</h3>
-      <div className="flex flex-col gap-2 text-sm">
-        <ShortcutRow label="Mark line start" shortcut="Space" />
-        <ShortcutRow label="Undo last mark" shortcut="Backspace / Ctrl+Z" />
-        <ShortcutRow label="Mark silence/instr" shortcut="B" />
-        <ShortcutRow label="Skip line" shortcut="S" />
-        <ShortcutRow label="Play / Pause" shortcut="K" />
-        <ShortcutRow label="Seek -3s / +3s" shortcut="J / L" />
+    <div className="bg-zinc-900/70 border border-zinc-800/80 rounded-xl p-4 flex flex-col gap-3">
+      <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Atajos de Teclado</h3>
+      <div className="flex flex-col gap-1.5 text-xs">
+        <ShortcutRow label="Sincronizar línea actual" shortcut="Espacio" />
+        <ShortcutRow label="Línea anterior (-2.5s)" shortcut="↑ / P" />
+        <ShortcutRow label="Línea siguiente" shortcut="↓ / N" />
+        <ShortcutRow label="Re-marcar línea (-2.5s)" shortcut="R" />
+        <ShortcutRow label="Deshacer marca" shortcut="Backspace / Ctrl+Z" />
+        <ShortcutRow label="Silencio / Instrumental" shortcut="B" />
+        <ShortcutRow label="Omitir línea" shortcut="S" />
+        <ShortcutRow label="Pausar / Reanudar" shortcut="Esc / K" />
+        <ShortcutRow label="Saltar -3s / +3s" shortcut="J / L" />
       </div>
     </div>
   );
@@ -17,9 +19,11 @@ export function KeyboardShortcutsPanel() {
 
 function ShortcutRow({ label, shortcut }: { label: string; shortcut: string }) {
   return (
-    <div className="flex justify-between items-center py-1">
-      <span className="text-zinc-300">{label}</span>
-      <span className="bg-zinc-800 text-zinc-400 px-2 py-1 rounded text-xs font-mono">{shortcut}</span>
+    <div className="flex justify-between items-center py-0.5">
+      <span className="text-zinc-400 font-medium">{label}</span>
+      <span className="bg-zinc-950/80 border border-zinc-800 text-zinc-300 px-1.5 py-0.5 rounded text-[11px] font-mono">
+        {shortcut}
+      </span>
     </div>
   );
 }

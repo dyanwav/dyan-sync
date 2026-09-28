@@ -3,11 +3,27 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 export function useCountdown(preRollSec: number = 3, onComplete?: () => void) {
   const [countdownValue, setCountdownValue] = useState<number | null>(null);
   const [isActive, setIsActive] = useState(false);
-  const timerRef = useRef<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  const cancelCountdown = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setIsActive(false);
+    setCountdownValue(null);
+  }, []);
 
   const startCountdown = useCallback(() => {
+    cancelCountdown();
+
     if (preRollSec <= 0) {
-      if (onComplete) onComplete();
+      if (onCompleteRef.current) onCompleteRef.current();
       return;
     }
 
@@ -15,37 +31,34 @@ export function useCountdown(preRollSec: number = 3, onComplete?: () => void) {
     setCountdownValue(preRollSec);
     let current = preRollSec;
 
-    const tick = () => {
+    timerRef.current = setInterval(() => {
       current -= 1;
       if (current > 0) {
         setCountdownValue(current);
-        timerRef.current = window.setTimeout(tick, 1000);
       } else {
-        setCountdownValue(null);
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        setCountdownValue(0);
         setIsActive(false);
-        if (onComplete) onComplete();
+        if (onCompleteRef.current) onCompleteRef.current();
       }
-    };
-
-    timerRef.current = window.setTimeout(tick, 1000);
-  }, [preRollSec, onComplete]);
-
-  const cancelCountdown = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-    setIsActive(false);
-    setCountdownValue(null);
-  }, []);
+    }, 1000);
+  }, [preRollSec, cancelCountdown]);
 
   useEffect(() => {
-    return () => cancelCountdown();
-  }, [cancelCountdown]);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
 
   return {
     countdownValue,
     isActive,
     startCountdown,
-    cancelCountdown
+    cancelCountdown,
   };
 }

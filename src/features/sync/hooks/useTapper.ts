@@ -16,7 +16,19 @@ export function useTapper(
   debounceMs: number = 70
 ) {
   const lastTapRef = useRef<number>(0);
-  const { mode, tapLine, undoLastTap, skipLine, markSilence, startSync, resumeSync, pauseSync, setMode } = useSyncStore();
+  const { 
+    mode, 
+    tapLine, 
+    undoLastTap, 
+    skipLine, 
+    markSilence, 
+    startSync, 
+    resumeSync, 
+    pauseSync, 
+    setMode,
+    goToPreviousLine,
+    goToNextLine,
+  } = useSyncStore();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -45,6 +57,10 @@ export function useTapper(
       const isK = e.key.toLowerCase() === 'k' || e.code === 'KeyK';
       const isJ = e.key.toLowerCase() === 'j' || e.code === 'KeyJ';
       const isL = e.key.toLowerCase() === 'l' || e.code === 'KeyL';
+      const isUp = e.key === 'ArrowUp' || e.key.toLowerCase() === 'p';
+      const isDown = e.key === 'ArrowDown' || e.key.toLowerCase() === 'n';
+      const isR = e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey;
+      const isEsc = e.key === 'Escape';
       const isUndo = e.key === 'Backspace' || (e.key.toLowerCase() === 'z' && (e.ctrlKey || e.metaKey));
 
       // Handle Space: Start / Resume / Tap
@@ -70,6 +86,46 @@ export function useTapper(
             const audioTime = engine.mapEventToAudioTime(e.timeStamp, tapOffsetMs);
             tapLine(audioTime);
           }
+        }
+        return;
+      }
+
+      // Handle Previous Line (ArrowUp or P)
+      if (isUp) {
+        e.preventDefault();
+        goToPreviousLine((cueTime) => {
+          if (engine) engine.seek(cueTime);
+        });
+        return;
+      }
+
+      // Handle Next Line (ArrowDown or N)
+      if (isDown) {
+        e.preventDefault();
+        goToNextLine((cueTime) => {
+          if (engine) engine.seek(cueTime);
+        });
+        return;
+      }
+
+      // Handle Rewind Current (R)
+      if (isR) {
+        e.preventDefault();
+        if (engine) {
+          const current = engine.getCurrentTime();
+          engine.seek(Math.max(0, current - 2.5));
+        }
+        return;
+      }
+
+      // Handle Escape: Pause or cancel countdown
+      if (isEsc) {
+        e.preventDefault();
+        if (mode === 'syncing') {
+          pauseSync();
+          if (engine) engine.pause();
+        } else if (mode === 'countdown') {
+          setMode('paused');
         }
         return;
       }
@@ -145,5 +201,20 @@ export function useTapper(
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [engine, mode, tapOffsetMs, debounceMs, tapLine, undoLastTap, skipLine, markSilence, startSync, resumeSync, pauseSync, setMode]);
+  }, [
+    engine, 
+    mode, 
+    tapOffsetMs, 
+    debounceMs, 
+    tapLine, 
+    undoLastTap, 
+    skipLine, 
+    markSilence, 
+    startSync, 
+    resumeSync, 
+    pauseSync, 
+    setMode, 
+    goToPreviousLine, 
+    goToNextLine
+  ]);
 }

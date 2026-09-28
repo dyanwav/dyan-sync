@@ -6,7 +6,7 @@ import { formatTime } from '@/shared/utils/format-time';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { Pencil, Check, X, Clock, Trash2 } from 'lucide-react';
+import { Pencil, Check, X, Clock, Trash2, RotateCcw, Target } from 'lucide-react';
 
 interface LineItemProps {
   line: LyricLine;
@@ -16,7 +16,7 @@ interface LineItemProps {
 }
 
 export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
-  const { updateLineText, nudgeLineTiming, setLineTiming, clearLineTiming, setCurrentLineIndex } = useSyncStore();
+  const { mode, updateLineText, nudgeLineTiming, setLineTiming, clearLineTiming, setCurrentLineIndex, syncFromLine } = useSyncStore();
   const audio = useAudioEngine();
 
   const [isEditingText, setIsEditingText] = useState(false);
@@ -62,6 +62,29 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
     setCurrentLineIndex(index);
     if (line.start !== null) {
       audio.engine.seek(line.start);
+    }
+  };
+
+  const handleSyncFromHere = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    syncFromLine(index, (cueTime) => {
+      audio.engine.seek(cueTime);
+    });
+    if (audio.state.playbackState !== 'playing') {
+      audio.play();
+      if (mode !== 'syncing') {
+        useSyncStore.getState().setMode('syncing');
+      }
+    }
+  };
+
+  const handleRewindCurrent = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const current = audio.engine.getCurrentTime();
+    const target = Math.max(0, current - 2.5);
+    audio.engine.seek(target);
+    if (audio.state.playbackState !== 'playing') {
+      audio.play();
     }
   };
 
@@ -143,7 +166,7 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
                 setIsEditingText(true);
               }}
               className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-zinc-500 hover:text-zinc-200 rounded shrink-0"
-              title="Editar texto"
+              title="Editar texto de la línea"
             >
               <Pencil className="h-3.5 w-3.5" />
             </button>
@@ -151,8 +174,27 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
         )}
       </div>
 
-      {/* Right: Timestamp & Millisecond Fine-Tuning Controls */}
+      {/* Right: Timestamp & Millisecond Fine-Tuning & Sync-from-here Controls */}
       <div className="flex items-center gap-2 shrink-0 self-end md:self-auto" onClick={(e) => e.stopPropagation()}>
+        {isActive && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
+              ACTIVA
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={handleRewindCurrent}
+              className="h-7 text-xs font-mono text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 px-2"
+              title="Rebobinar 2.5s para volver a marcar esta línea (Atajo: R)"
+            >
+              <RotateCcw className="mr-1 h-3 w-3" />
+              Re-marcar
+            </Button>
+          </div>
+        )}
+
         {isSynced && line.start !== null ? (
           <div className="flex items-center gap-1.5 bg-zinc-950/80 p-1 rounded-lg border border-zinc-800">
             {/* Fine Nudge Controls */}
@@ -213,6 +255,18 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
               <Clock className="h-3.5 w-3.5" />
             </button>
 
+            {/* Sync from here (jump to this line and start playback) */}
+            {!isActive && (
+              <button
+                type="button"
+                onClick={handleSyncFromHere}
+                className="p-1 text-zinc-400 hover:text-blue-400 rounded hover:bg-blue-500/10 transition-colors"
+                title="Sincronizar desde esta línea (rebobina 2.5s y reproduce)"
+              >
+                <Target className="h-3.5 w-3.5 text-blue-400" />
+              </button>
+            )}
+
             {/* Clear timing */}
             <button
               type="button"
@@ -224,7 +278,21 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            {!isActive && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={handleSyncFromHere}
+                className="h-7 text-xs font-mono text-zinc-400 hover:text-blue-300 hover:bg-blue-500/10 px-2"
+                title="Sincronizar desde esta línea (rebobina 2.5s y reproduce)"
+              >
+                <Target className="mr-1 h-3 w-3 text-blue-400" />
+                Sincronizar desde aquí
+              </Button>
+            )}
+
             <Button
               type="button"
               size="sm"

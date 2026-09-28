@@ -35,6 +35,9 @@ export interface SyncState {
   nudgeLineTiming: (id: string, deltaSeconds: number) => void;
   setLineTiming: (id: string, startSeconds: number) => void;
   clearLineTiming: (id: string) => void;
+  goToPreviousLine: (seekCallback?: (time: number) => void) => void;
+  goToNextLine: (seekCallback?: (time: number) => void) => void;
+  syncFromLine: (targetIndex: number, seekCallback?: (time: number) => void) => void;
 }
 
 export const useSyncStore = create<SyncState>((set, get) => ({
@@ -305,5 +308,86 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     const newLines = lines.map(l => l.id === id ? { ...l, start: null, end: null, status: 'pending' as const } : l);
     set({ lines: newLines });
     useProjectStore.getState().setLines(newLines);
+  },
+
+  goToPreviousLine: (seekCallback) => {
+    const { lines, currentLineIndex } = get();
+    if (lines.length === 0) return;
+
+    let targetIdx = currentLineIndex - 1;
+    while (targetIdx >= 0 && (lines[targetIdx].kind === 'section' || lines[targetIdx].text === '')) {
+      targetIdx--;
+    }
+
+    if (targetIdx < 0) {
+      let first = 0;
+      while (first < lines.length && (lines[first].kind === 'section' || lines[first].text === '')) {
+        first++;
+      }
+      targetIdx = first < lines.length ? first : 0;
+    }
+
+    set({ currentLineIndex: targetIdx });
+
+    const targetLine = lines[targetIdx];
+    if (targetLine && targetLine.start !== null) {
+      const cueTime = Math.max(0, Number((targetLine.start - 2.5).toFixed(3)));
+      if (seekCallback) seekCallback(cueTime);
+    } else {
+      let prevSyncedStart: number | null = null;
+      for (let i = targetIdx - 1; i >= 0; i--) {
+        if (lines[i].status === 'synced' && lines[i].start !== null) {
+          prevSyncedStart = lines[i].start;
+          break;
+        }
+      }
+      if (prevSyncedStart !== null && seekCallback) {
+        seekCallback(Math.max(0, Number((prevSyncedStart - 1).toFixed(3))));
+      }
+    }
+  },
+
+  goToNextLine: (seekCallback) => {
+    const { lines, currentLineIndex } = get();
+    if (lines.length === 0) return;
+
+    let targetIdx = currentLineIndex + 1;
+    while (targetIdx < lines.length && (lines[targetIdx].kind === 'section' || lines[targetIdx].text === '')) {
+      targetIdx++;
+    }
+
+    if (targetIdx >= lines.length) return;
+
+    set({ currentLineIndex: targetIdx });
+
+    const targetLine = lines[targetIdx];
+    if (targetLine && targetLine.start !== null && seekCallback) {
+      seekCallback(Math.max(0, Number((targetLine.start - 1.5).toFixed(3))));
+    }
+  },
+
+  syncFromLine: (targetIndex, seekCallback) => {
+    const { lines } = get();
+    if (targetIndex < 0 || targetIndex >= lines.length) return;
+    if (lines[targetIndex].kind === 'section' || lines[targetIndex].text === '') return;
+
+    set({ currentLineIndex: targetIndex });
+
+    const targetLine = lines[targetIndex];
+    if (targetLine && targetLine.start !== null) {
+      const cueTime = Math.max(0, Number((targetLine.start - 2.5).toFixed(3)));
+      if (seekCallback) seekCallback(cueTime);
+    } else {
+      let prevSyncedStart: number | null = null;
+      for (let i = targetIndex - 1; i >= 0; i--) {
+        if (lines[i].status === 'synced' && lines[i].start !== null) {
+          prevSyncedStart = lines[i].start;
+          break;
+        }
+      }
+      if (prevSyncedStart !== null && seekCallback) {
+        seekCallback(Math.max(0, Number((prevSyncedStart - 1).toFixed(3))));
+      }
+    }
   },
 }));

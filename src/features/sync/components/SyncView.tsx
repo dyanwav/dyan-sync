@@ -8,8 +8,8 @@ import {
   Undo2, 
   FileEdit, 
   Settings2, 
-  ArrowUp, 
-  ArrowDown, 
+  ChevronUp, 
+  ChevronDown, 
   RotateCcw,
   ArrowRight,
   Music2,
@@ -31,6 +31,7 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
     lines, 
     currentLineIndex, 
     mode, 
+    tapLine,
     undoLastTap, 
     goToPreviousLine,
     goToNextLine,
@@ -39,6 +40,8 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
   const audio = useAudioEngine();
   const { t } = useTranslation();
   
+  const isPlaying = audio.state.playbackState === 'playing' || Boolean(audio.engine?.clock?.isPlaying);
+
   const [showEditModal, setShowEditModal] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const activeLineRef = useRef<HTMLDivElement>(null);
@@ -151,17 +154,29 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
   const handlePrevLine = (e: React.MouseEvent) => {
     e.preventDefault();
     (e.currentTarget as HTMLElement).blur();
-    goToPreviousLine((cueTime) => {
-      audio.engine.seek(cueTime);
-    });
+    if (isPlaying) {
+      goToPreviousLine((cueTime) => {
+        const target = Math.max(0, cueTime > 0 ? cueTime - 1.5 : audio.engine.getCurrentTime() - 2.5);
+        audio.engine.seek(target);
+      });
+    } else {
+      goToPreviousLine((cueTime) => {
+        audio.engine.seek(cueTime);
+      });
+    }
   };
 
   const handleNextLine = (e: React.MouseEvent) => {
     e.preventDefault();
     (e.currentTarget as HTMLElement).blur();
-    goToNextLine((cueTime) => {
-      audio.engine.seek(cueTime);
-    });
+    if (isPlaying) {
+      const audioTime = audio.engine.mapEventToAudioTime(performance.now(), project?.settings.tapOffsetMs ?? -120);
+      tapLine(audioTime);
+    } else {
+      goToNextLine((cueTime) => {
+        audio.engine.seek(cueTime);
+      });
+    }
   };
 
   const handleRewindCurrent = (e: React.MouseEvent) => {
@@ -175,9 +190,9 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
     <div className="flex flex-col h-full w-full bg-zinc-950 text-zinc-100 font-sans select-none">
       
       {/* Top Studio Header Bar */}
-      <header className="shrink-0 px-6 py-3.5 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-xl flex flex-wrap justify-between items-center gap-4">
+      <header className="shrink-0 px-3 sm:px-6 py-2.5 sm:py-3.5 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-xl flex flex-wrap justify-between items-center gap-2 sm:gap-4">
         {/* Left: Back button & Project info & Sync Mode */}
-        <div className="flex items-center gap-3.5 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
           {onBackToSetup && (
             <Button
               type="button"
@@ -185,24 +200,24 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
               size="sm"
               onClick={onBackToSetup}
               disabled={mode === 'syncing' || mode === 'countdown'}
-              className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-9 px-2.5 shrink-0 cursor-pointer"
+              className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-8 sm:h-9 px-2 sm:px-2.5 shrink-0 cursor-pointer"
               title="Volver a Configuración"
             >
-              <ChevronLeft className="h-4 w-4 mr-1 text-zinc-400" />
-              <span>Configuración</span>
+              <ChevronLeft className="h-4 w-4 sm:mr-1 text-zinc-400" />
+              <span className="hidden sm:inline">Configuración</span>
             </Button>
           )}
 
-          <div className="h-10 w-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
-            <Music2 className="h-5 w-5 text-blue-400" />
+          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+            <Music2 className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="text-base md:text-lg font-bold text-white truncate max-w-[200px] md:max-w-md">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <h1 className="text-sm sm:text-base md:text-lg font-bold text-white truncate max-w-[110px] xs:max-w-[160px] sm:max-w-xs md:max-w-md">
                 {project?.meta.title || t('sync.title')}
               </h1>
               <span className={cn(
-                "text-xs font-mono font-bold px-2 py-0.5 rounded-full border shrink-0",
+                "text-[10px] sm:text-xs font-mono font-bold px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full border shrink-0",
                 mode === 'syncing' ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30 animate-pulse" :
                 mode === 'paused' ? "bg-amber-500/20 text-amber-300 border-amber-500/30" :
                 mode === 'countdown' ? "bg-purple-500/20 text-purple-300 border-purple-500/30" :
@@ -211,8 +226,8 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
                 {mode.toUpperCase()}
               </span>
             </div>
-            <p className="text-xs text-zinc-400 truncate">
-              {project?.meta.artist || 'Sin artista'} • {syncedCount} de {totalLyrics} líneas ({progressPercent}%)
+            <p className="text-[11px] sm:text-xs text-zinc-400 truncate">
+              {project?.meta.artist || 'Sin artista'} • {syncedCount} de {totalLyrics} ({progressPercent}%)
             </p>
           </div>
         </div>
@@ -231,16 +246,17 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
         </div>
 
         {/* Right Toolbar Actions */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => setShowEditModal(true)}
-            className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs"
+            className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-8 sm:h-9 px-2 sm:px-3"
+            title="Editar Letras"
           >
-            <FileEdit className="mr-1.5 h-3.5 w-3.5 text-blue-400" />
-            Editar Letras
+            <FileEdit className="h-3.5 w-3.5 sm:mr-1.5 text-blue-400" />
+            <span className="hidden sm:inline">Editar Letras</span>
           </Button>
 
           {onOpenCalibration && (
@@ -249,10 +265,11 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
               variant="outline"
               size="sm"
               onClick={onOpenCalibration}
-              className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs"
+              className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-8 sm:h-9 px-2 sm:px-3"
+              title={t('sync.calibrate')}
             >
-              <Settings2 className="mr-1.5 h-3.5 w-3.5 text-zinc-400" />
-              {t('sync.calibrate')}
+              <Settings2 className="h-3.5 w-3.5 sm:mr-1.5 text-zinc-400" />
+              <span className="hidden sm:inline">{t('sync.calibrate')}</span>
             </Button>
           )}
 
@@ -263,9 +280,9 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
               onClick={onContinueToPreview}
               disabled={!hasSyncedLines || mode === 'syncing' || mode === 'countdown'}
               className={cn(
-                "font-semibold text-xs ml-1 transition-all",
+                "font-semibold text-xs h-8 sm:h-9 px-2.5 sm:px-3.5 transition-all cursor-pointer",
                 hasSyncedLines && mode !== 'syncing' && mode !== 'countdown'
-                  ? "bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.35)] cursor-pointer"
+                  ? "bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.35)]"
                   : "bg-zinc-800/80 text-zinc-500 cursor-not-allowed border border-zinc-700/40"
               )}
               title={
@@ -276,8 +293,9 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
                   : "Continuar a Vista Previa"
               }
             >
-              <span>{t('sync.continueToPreview')}</span>
-              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              <span className="hidden xs:inline">{t('sync.continueToPreview')}</span>
+              <span className="xs:hidden">Vista Previa</span>
+              <ArrowRight className="ml-1 sm:ml-1.5 h-3.5 w-3.5" />
             </Button>
           )}
         </div>
@@ -292,7 +310,7 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
         {/* Native Smooth Scroll Container with Custom Scrollbar */}
         <div 
           ref={scrollContainerRef}
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 md:px-16 lg:px-28 py-10 space-y-3 custom-scrollbar relative z-10"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2.5 sm:px-8 md:px-16 lg:px-28 py-4 sm:py-10 space-y-2 sm:space-y-3 custom-scrollbar relative z-10"
         >
           {lines.map((line, index) => (
             <LineItem
@@ -305,12 +323,12 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
           ))}
           
           {/* Bottom extra cushion so last lines can be centered */}
-          <div className="h-44" />
+          <div className="h-36 sm:h-44" />
         </div>
       </main>
 
       {/* Bottom Compact Studio Dock with Integrated Controls */}
-      <footer className="shrink-0 border-t border-zinc-800/80 bg-zinc-950/95 backdrop-blur-2xl px-4 py-2 flex justify-center shadow-[0_-10px_35px_rgba(0,0,0,0.6)] z-20">
+      <footer className="shrink-0 border-t border-zinc-800/80 bg-zinc-950/95 backdrop-blur-2xl px-2 sm:px-4 py-1.5 sm:py-2 flex justify-center shadow-[0_-10px_35px_rgba(0,0,0,0.6)] z-20">
         <div className="w-full max-w-5xl">
           <TransportControls 
             audio={audio}
@@ -319,27 +337,33 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  size="icon"
                   onClick={handlePrevLine}
                   disabled={currentLineIndex <= 0}
-                  className="bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 h-8 px-2 sm:px-2.5 text-xs rounded-lg cursor-pointer"
-                  title="Línea anterior (-2.5s) (Atajo: ↑ o P)"
+                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 cursor-pointer shrink-0 transition-transform active:scale-95 flex items-center justify-center p-0"
+                  title={isPlaying ? "Reintentar línea anterior (retrocede 1.5s) (Atajo: ↑ o P)" : "Línea anterior (Atajo: ↑ o P)"}
                 >
-                  <ArrowUp className="h-3.5 w-3.5 sm:mr-1 text-blue-400" />
-                  <span className="hidden sm:inline">Anterior</span>
+                  <ChevronUp className="h-5 w-5 sm:h-5.5 sm:w-5.5 stroke-[2.2] text-zinc-300" />
                 </Button>
 
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  size="icon"
                   onClick={handleNextLine}
                   disabled={currentLineIndex >= lines.length - 1}
-                  className="bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 h-8 px-2 sm:px-2.5 text-xs rounded-lg cursor-pointer"
-                  title="Línea siguiente (Atajo: ↓ o N)"
+                  className={cn(
+                    "h-9 w-9 sm:h-10 sm:w-10 rounded-xl cursor-pointer shrink-0 transition-all active:scale-95 flex items-center justify-center p-0",
+                    isPlaying
+                      ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                      : "bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800"
+                  )}
+                  title={isPlaying ? "Marcar timestamp de esta línea y avanzar (Atajo: ↓ o N)" : "Línea siguiente (Atajo: ↓ o N)"}
                 >
-                  <ArrowDown className="h-3.5 w-3.5 sm:mr-1 text-blue-400" />
-                  <span className="hidden sm:inline">Siguiente</span>
+                  <ChevronDown className={cn(
+                    "h-5 w-5 sm:h-5.5 sm:w-5.5 stroke-[2.2]",
+                    isPlaying ? "text-white" : "text-zinc-300"
+                  )} />
                 </Button>
 
                 <Button
@@ -347,11 +371,11 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
                   variant="ghost"
                   size="sm"
                   onClick={handleRewindCurrent}
-                  className="text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 h-8 px-2 rounded-lg cursor-pointer"
+                  className="text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 h-8 sm:h-9 px-1.5 sm:px-2 rounded-lg cursor-pointer flex items-center"
                   title="Rebobinar 2.5s en línea actual (Atajo: R)"
                 >
-                  <RotateCcw className="h-3 w-3 mr-1" />
-                  <span>-2.5s</span>
+                  <RotateCcw className="h-3 w-3 sm:h-3.5 sm:w-3.5 sm:mr-1" />
+                  <span className="text-[10px] sm:text-xs">-2.5s</span>
                 </Button>
               </div>
             }
@@ -359,7 +383,9 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
               <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400 bg-zinc-900/80 px-2.5 py-0.5 rounded-full border border-zinc-800/80">
                 <span>Play/Pausa: <kbd className="px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700">Espacio</kbd></span>
                 <span className="text-zinc-600">•</span>
-                <span>Navegar: <kbd className="px-1 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700">↑</kbd><kbd className="px-1 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700 ml-0.5">↓</kbd></span>
+                <span>Marcar/Avanzar: <kbd className="px-1 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700">↓</kbd></span>
+                <span className="text-zinc-600">•</span>
+                <span>Anterior: <kbd className="px-1 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700">↑</kbd></span>
               </div>
             }
             rightActions={
@@ -368,7 +394,7 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
                 variant="outline"
                 size="sm"
                 onClick={handleUndo}
-                className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white h-8 px-2 sm:px-2.5 text-xs rounded-lg cursor-pointer"
+                className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white h-8 sm:h-9 px-2 sm:px-2.5 text-xs rounded-xl cursor-pointer flex items-center"
                 title="Deshacer última marca (Backspace / Ctrl+Z)"
               >
                 <Undo2 className="h-3.5 w-3.5 sm:mr-1 text-amber-400" />

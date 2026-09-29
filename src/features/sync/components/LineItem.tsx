@@ -124,7 +124,7 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
       data-line-index={index}
       onClick={handleLineClick}
       className={cn(
-        "group relative flex items-center justify-between gap-4 px-4 py-3 rounded-2xl transition-all duration-200 cursor-pointer border select-none w-full",
+        "group relative flex items-center justify-between gap-2.5 sm:gap-4 px-2.5 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl transition-all duration-200 cursor-pointer border select-none w-full",
         isActive
           ? "bg-gradient-to-r from-blue-600/25 via-indigo-600/15 to-transparent border-blue-500/80 shadow-[0_0_30px_rgba(59,130,246,0.22)] ring-1 ring-blue-500/50 scale-[1.004]"
           : isSynced
@@ -134,22 +134,18 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
           : "bg-transparent hover:bg-zinc-900/30 border-transparent hover:border-zinc-800/50 opacity-60 hover:opacity-100"
       )}
     >
-      {/* Left: Indicator + Timing cluster [-] timestamp [+] [>] */}
-      <div className="flex items-center gap-3 shrink-0">
-        {isActive && (
-          <div className="w-1.5 h-6 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.9)] shrink-0" />
-        )}
-
+      {/* Left: Timing cluster [-] timestamp [+] [>] */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Timing cluster: [-] timestamp [+] [>] */}
         <div className="flex items-center bg-zinc-950/90 rounded-xl border border-zinc-800 p-0.5 shadow-inner">
-          {/* Subtract button [-] */}
+          {/* Subtract button [-] (100ms normal, 50ms with Shift) */}
           <button
             type="button"
-            onClick={(e) => handleNudge(e, e.shiftKey ? -0.01 : -0.05)}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-            title="Restar 50ms (Shift+clic: -10ms)"
+            onClick={(e) => handleNudge(e, e.shiftKey ? -0.05 : -0.10)}
+            className="p-1 sm:p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+            title="Restar 100ms (Shift+clic: -50ms)"
           >
-            <Minus className="h-3.5 w-3.5" />
+            <Minus className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
           </button>
 
           {/* Timestamp text */}
@@ -159,7 +155,7 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
               handleSnapToPlayhead(e);
             }}
             className={cn(
-              "font-mono text-xs font-bold px-2 py-0.5 rounded min-w-[65px] text-center select-none cursor-pointer hover:bg-zinc-800/60 transition-colors",
+              "font-mono text-[11px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded min-w-[56px] sm:min-w-[65px] text-center select-none cursor-pointer hover:bg-zinc-800/60 transition-colors",
               isActive
                 ? "bg-blue-600/30 text-blue-200 border border-blue-500/40"
                 : isSynced
@@ -171,44 +167,44 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
             {isSynced && line.start !== null ? formatTime(line.start) : "--:--.--"}
           </div>
 
-          {/* Add button [+] */}
+          {/* Add button [+] (100ms normal, 50ms with Shift) */}
           <button
             type="button"
-            onClick={(e) => handleNudge(e, e.shiftKey ? 0.01 : 0.05)}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-            title="Sumar 50ms (Shift+clic: +10ms)"
+            onClick={(e) => handleNudge(e, e.shiftKey ? 0.05 : 0.10)}
+            className="p-1 sm:p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+            title="Sumar 100ms (Shift+clic: +50ms)"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
           </button>
 
           {/* Play from this line button [>] */}
           <button
             type="button"
             onClick={handlePlayFromLine}
-            className="ml-1 p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 hover:border-blue-500 transition-all shadow-sm"
+            className="ml-0.5 sm:ml-1 p-1 sm:p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 hover:border-blue-500 transition-all shadow-sm cursor-pointer"
             title="Reproducir desde esta línea [>]"
           >
-            <Play className="h-3.5 w-3.5 fill-current" />
+            <Play className="h-3 sm:h-3.5 w-3 sm:w-3.5 fill-current" />
           </button>
         </div>
 
-        {/* Delete timestamp button (hover only if synced) */}
+        {/* Delete timestamp button (hover/focus only if synced) */}
         {isSynced && (
           <button
             type="button"
             onClick={handleClear}
-            className="opacity-0 group-hover:opacity-100 p-1 text-zinc-600 hover:text-red-400 rounded transition-opacity"
+            className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 p-1 text-zinc-600 hover:text-red-400 rounded transition-opacity cursor-pointer"
             title="Quitar sincronización"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
           </button>
         )}
       </div>
 
       {/* Main Lyric Text Area (takes remaining width) */}
-      <div className="flex items-center gap-3 flex-1 min-w-0">
+      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
         {isEditingText ? (
-          <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
             <Input
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
@@ -217,23 +213,23 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
                 if (e.key === 'Escape') handleCancelText();
               }}
               autoFocus
-              className="h-9 text-base bg-zinc-950 border-blue-500 text-white"
+              className="h-8 sm:h-9 text-sm sm:text-base bg-zinc-950 border-blue-500 text-white"
             />
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-400 hover:bg-emerald-500/20" onClick={handleSaveText}>
-              <Check className="h-4 w-4" />
+            <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8 text-emerald-400 hover:bg-emerald-500/20" onClick={handleSaveText}>
+              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:bg-zinc-800" onClick={handleCancelText}>
-              <X className="h-4 w-4" />
+            <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8 text-zinc-400 hover:bg-zinc-800" onClick={handleCancelText}>
+              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
           </div>
         ) : (
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <span className={cn(
-              "tracking-tight truncate transition-all duration-150",
-              isActive ? "text-lg md:text-xl font-black text-white" :
-              isSynced ? "text-base md:text-lg font-semibold text-zinc-200" :
-              isSkipped ? "text-base md:text-lg text-zinc-500 line-through" :
-              "text-base md:text-lg text-zinc-400 font-normal"
+              "tracking-tight transition-all duration-150 break-words leading-snug",
+              isActive ? "text-base sm:text-lg md:text-xl font-bold sm:font-black text-white" :
+              isSynced ? "text-sm sm:text-base md:text-lg font-medium sm:font-semibold text-zinc-200" :
+              isSkipped ? "text-sm sm:text-base md:text-lg text-zinc-500 line-through" :
+              "text-sm sm:text-base md:text-lg text-zinc-400 font-normal"
             )}>
               {line.text}
             </span>
@@ -244,7 +240,7 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
                 e.stopPropagation();
                 setIsEditingText(true);
               }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-zinc-500 hover:text-zinc-200 rounded shrink-0"
+              className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 p-1 sm:p-1.5 text-zinc-500 hover:text-zinc-200 rounded shrink-0 transition-opacity cursor-pointer"
               title="Editar texto de la línea"
             >
               <Pencil className="h-3.5 w-3.5" />

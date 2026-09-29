@@ -12,11 +12,12 @@ export interface AudioEngineLike {
 
 export function useTapper(
   engine: AudioEngineLike | null,
-  _tapOffsetMs: number = -120,
+  tapOffsetMs: number = -120,
   _debounceMs: number = 70
 ) {
   const { 
     mode, 
+    tapLine,
     undoLastTap, 
     pauseSync, 
     setMode,
@@ -57,18 +58,30 @@ export function useTapper(
       // Handle Previous Line (ArrowUp or P)
       if (isUp) {
         e.preventDefault();
-        goToPreviousLine((cueTime) => {
-          if (engine) engine.seek(cueTime);
-        });
+        if (engine && engine.clock?.isPlaying) {
+          goToPreviousLine((cueTime) => {
+            const target = Math.max(0, cueTime > 0 ? cueTime - 1.5 : engine.getCurrentTime() - 2.5);
+            engine.seek(target);
+          });
+        } else {
+          goToPreviousLine((cueTime) => {
+            if (engine) engine.seek(cueTime);
+          });
+        }
         return;
       }
 
-      // Handle Next Line (ArrowDown or N)
+      // Handle Next Line (ArrowDown or N): Syncs line if playing, or navigates if paused
       if (isDown) {
         e.preventDefault();
-        goToNextLine((cueTime) => {
-          if (engine) engine.seek(cueTime);
-        });
+        if (engine && engine.clock?.isPlaying) {
+          const audioTime = engine.mapEventToAudioTime(e.timeStamp, tapOffsetMs);
+          tapLine(audioTime);
+        } else {
+          goToNextLine((cueTime) => {
+            if (engine) engine.seek(cueTime);
+          });
+        }
         return;
       }
 
@@ -141,10 +154,12 @@ export function useTapper(
   }, [
     engine, 
     mode, 
+    tapLine,
     undoLastTap, 
     pauseSync, 
     setMode, 
     goToPreviousLine, 
-    goToNextLine
+    goToNextLine,
+    tapOffsetMs
   ]);
 }

@@ -100,13 +100,13 @@ export function TransportControls({
       </div>
       
       {/* Controls Row */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 px-1">
+      <div className="flex items-center justify-between gap-1.5 sm:gap-2.5 px-0.5 sm:px-1">
         {/* Left Side: Playback buttons + integrated leftActions */}
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0">
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-lg cursor-pointer"
+            className="hidden sm:inline-flex h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-lg cursor-pointer shrink-0"
             onClick={() => handleSeek(-3)} 
             disabled={!state.isLoaded}
             title="Retroceder 3s (J / ←)"
@@ -118,7 +118,7 @@ export function TransportControls({
             variant="default" 
             size="icon" 
             className={cn(
-              "rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)] cursor-pointer transition-transform active:scale-95",
+              "rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)] cursor-pointer transition-transform active:scale-95 shrink-0",
               compact ? "w-8 h-8" : "w-9 h-9 sm:w-10 sm:h-10"
             )}
             onClick={handleTogglePlay}
@@ -135,7 +135,7 @@ export function TransportControls({
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-lg cursor-pointer"
+            className="hidden sm:inline-flex h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-lg cursor-pointer shrink-0"
             onClick={() => handleSeek(3)} 
             disabled={!state.isLoaded}
             title="Avanzar 3s (L / →)"
@@ -144,7 +144,7 @@ export function TransportControls({
           </Button>
 
           {leftActions && (
-            <div className="flex items-center gap-1.5 ml-1 sm:ml-2 pl-2 sm:pl-2.5 border-l border-zinc-800/80">
+            <div className="flex items-center gap-1 sm:gap-1.5 ml-0.5 sm:ml-2 pl-1 sm:pl-2.5 border-l border-zinc-800/80">
               {leftActions}
             </div>
           )}
@@ -152,15 +152,15 @@ export function TransportControls({
 
         {/* Center Side if provided */}
         {centerActions && (
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2">
             {centerActions}
           </div>
         )}
         
         {/* Right Side: integrated rightActions + Speed + Volume */}
-        <div className="flex items-center gap-2 sm:gap-2.5 ml-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 ml-auto shrink-0">
           {rightActions && (
-            <div className="flex items-center gap-1.5 pr-2 sm:pr-2.5 border-r border-zinc-800/80">
+            <div className="flex items-center gap-1 sm:gap-1.5 pr-1.5 sm:pr-2.5 border-r border-zinc-800/80">
               {rightActions}
             </div>
           )}
@@ -168,7 +168,7 @@ export function TransportControls({
           <select 
             value={state.playbackRate} 
             onChange={handleRateChange}
-            className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-300 outline-none cursor-pointer h-8"
+            className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs text-zinc-300 outline-none cursor-pointer h-8"
             disabled={!state.isLoaded}
             title="Velocidad de reproducción"
           >
@@ -177,7 +177,7 @@ export function TransportControls({
             <option value={1.25}>1.25x</option>
           </select>
           
-          <div className="hidden sm:flex items-center gap-2 w-24 lg:w-28">
+          <div className="hidden sm:flex items-center gap-2 w-20 lg:w-28">
             <Volume2 className="w-4 h-4 text-zinc-400 shrink-0" />
             <Slider
               defaultValue={[1]}

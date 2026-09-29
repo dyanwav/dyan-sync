@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import type { LyricLine } from '@/features/project/types';
 import { useSyncStore } from '../store';
+import { useProjectStore } from '@/features/project/store';
 import { useAudioEngine } from '@/features/audio';
 import { formatTime } from '@/shared/utils/format-time';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { Pencil, Check, X, Trash2, Minus, Plus, Play } from 'lucide-react';
+import { Pencil, Check, X, Minus, Plus, Play } from 'lucide-react';
 
 interface LineItemProps {
   line: LyricLine;
@@ -18,12 +19,14 @@ interface LineItemProps {
 export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
   const { 
     mode, 
+    tapLine,
     updateLineText, 
     nudgeLineTiming, 
     setLineTiming, 
     clearLineTiming, 
     setCurrentLineIndex, 
   } = useSyncStore();
+  const project = useProjectStore((s) => s.project);
   const audio = useAudioEngine();
 
   const [isEditingText, setIsEditingText] = useState(false);
@@ -97,10 +100,30 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
     }
   };
 
-  const handleSnapToPlayhead = (e: React.MouseEvent) => {
+  const handleTimestampClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const current = audio.engine.getCurrentTime();
-    setLineTiming(line.id, current);
+    setCurrentLineIndex(index);
+
+    if (line.start === null) {
+      // If pending, mark timestamp at current audio position
+      const isPlaying = audio.state.playbackState === 'playing' || Boolean(audio.engine?.clock?.isPlaying);
+      if (isPlaying) {
+        const audioTime = audio.engine.mapEventToAudioTime(
+          performance.now(),
+          project?.settings.tapOffsetMs ?? -120
+        );
+        tapLine(audioTime, index);
+      } else {
+        const current = audio.engine.getCurrentTime();
+        setLineTiming(line.id, current);
+      }
+    } else {
+      // If already synced, seek to that moment and play (NEVER overwrite)
+      audio.engine.seek(line.start);
+      if (audio.state.playbackState !== 'playing') {
+        audio.play();
+      }
+    }
   };
 
   const handleNudge = (e: React.MouseEvent, deltaSec: number) => {
@@ -135,7 +158,7 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
       )}
     >
       {/* Left: Timing cluster [-] timestamp [+] [>] */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         {/* Timing cluster: [-] timestamp [+] [>] */}
         <div className="flex items-center bg-zinc-950/90 rounded-xl border border-zinc-800 p-0.5 shadow-inner">
           {/* Subtract button [-] (100ms normal, 50ms with Shift) */}
@@ -148,24 +171,28 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
             <Minus className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
           </button>
 
-          {/* Timestamp text */}
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              handleSnapToPlayhead(e);
-            }}
+          {/* Timestamp text / button */}
+          <button
+            type="button"
+            onClick={handleTimestampClick}
             className={cn(
-              "font-mono text-[11px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded min-w-[56px] sm:min-w-[65px] text-center select-none cursor-pointer hover:bg-zinc-800/60 transition-colors",
-              isActive
-                ? "bg-blue-600/30 text-blue-200 border border-blue-500/40"
+              "font-mono text-[11px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded min-w-[56px] sm:min-w-[65px] text-center select-none cursor-pointer transition-all border",
+              isActive && !isSynced
+                ? "bg-blue-600/30 text-blue-200 border-blue-500/60 shadow-[0_0_12px_rgba(59,130,246,0.35)] animate-pulse"
+                : isActive && isSynced
+                ? "bg-blue-600/20 text-white border-blue-500/40 hover:bg-blue-600/30"
                 : isSynced
-                ? "text-zinc-200"
-                : "text-zinc-600"
+                ? "text-zinc-200 border-transparent hover:text-white hover:bg-zinc-800/80"
+                : "text-zinc-500 border-transparent hover:text-blue-300 hover:bg-zinc-800/40"
             )}
-            title={isSynced ? "Tiempo [mm:ss.xx] (clic para fijar a cabezal)" : "Pendiente (clic para fijar al audio actual)"}
+            title={
+              isSynced
+                ? `Reproducir desde ${formatTime(line.start!)}`
+                : "Marcar timestamp en este instante"
+            }
           >
             {isSynced && line.start !== null ? formatTime(line.start) : "--:--.--"}
-          </div>
+          </button>
 
           {/* Add button [+] (100ms normal, 50ms with Shift) */}
           <button
@@ -188,15 +215,18 @@ export function LineItem({ line, index, isActive, activeRef }: LineItemProps) {
           </button>
         </div>
 
-        {/* Delete timestamp button (hover/focus only if synced) */}
+        {/* Clear timestamp button (X) */}
         {isSynced && (
           <button
             type="button"
             onClick={handleClear}
-            className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 p-1 text-zinc-600 hover:text-red-400 rounded transition-opacity cursor-pointer"
-            title="Quitar sincronización"
+            className={cn(
+              "p-1 sm:p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer shrink-0",
+              isActive ? "opacity-100 text-zinc-400" : "opacity-80 sm:opacity-0 sm:group-hover:opacity-100"
+            )}
+            title="Quitar timestamp de esta línea"
           >
-            <Trash2 className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
+            <X className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
           </button>
         )}
       </div>

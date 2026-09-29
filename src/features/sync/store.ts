@@ -20,7 +20,7 @@ export interface SyncState {
 
   setLines: (lines: LyricLine[]) => void;
   startSync: () => void;
-  tapLine: (audioTime: number) => void;
+  tapLine: (audioTime: number, targetIndex?: number) => void;
   undoLastTap: () => void;
   skipLine: () => void;
   markSilence: (audioTime: number) => void;
@@ -59,11 +59,11 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
   startSync: () => set({ mode: 'countdown', countdownValue: 3 }),
 
-  tapLine: (audioTime) => {
+  tapLine: (audioTime, targetIndex) => {
     const { lines, currentLineIndex, syncHistory } = get();
 
     // Advance to next valid lyric line
-    let activeIdx = currentLineIndex;
+    let activeIdx = targetIndex !== undefined ? targetIndex : currentLineIndex;
     while (activeIdx < lines.length && (lines[activeIdx].kind === 'section' || lines[activeIdx].text === '')) {
       activeIdx++;
     }
@@ -306,6 +306,21 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   clearLineTiming: (id) => {
     const { lines } = get();
     const newLines = lines.map(l => l.id === id ? { ...l, start: null, end: null, status: 'pending' as const } : l);
+
+    // Re-derive end times for synced lines
+    for (let i = 0; i < newLines.length; i++) {
+      if (newLines[i].status === 'synced' && newLines[i].start !== null) {
+        let nextStart: number | null = null;
+        for (let j = i + 1; j < newLines.length; j++) {
+          if (newLines[j].start !== null) {
+            nextStart = newLines[j].start;
+            break;
+          }
+        }
+        newLines[i] = { ...newLines[i], end: nextStart };
+      }
+    }
+
     set({ lines: newLines });
     useProjectStore.getState().setLines(newLines);
   },

@@ -5,12 +5,10 @@ import { useAudioEngine } from '@/features/audio';
 import { Button } from '@/shared/ui/button';
 import { cn } from '@/shared/utils/cn';
 import { 
-  Undo2, 
   FileEdit, 
   Settings2, 
   ChevronUp, 
   ChevronDown, 
-  RotateCcw,
   ArrowRight,
   Music2,
   ChevronLeft
@@ -31,16 +29,12 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
     lines, 
     currentLineIndex, 
     mode, 
-    tapLine,
-    undoLastTap, 
-    goToPreviousLine,
-    goToNextLine,
+    goToPreviousLine, 
+    goToNextLine, 
   } = useSyncStore();
   const project = useProjectStore((s) => s.project);
   const audio = useAudioEngine();
   const { t } = useTranslation();
-  
-  const isPlaying = audio.state.playbackState === 'playing' || Boolean(audio.engine?.clock?.isPlaying);
 
   const [showEditModal, setShowEditModal] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -88,13 +82,14 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
     }
   }, [currentLineIndex]);
 
-  // Auto-follow active line in real time as audio plays or seeks
+  // Auto-follow active line in real time as audio plays
   useEffect(() => {
     let rAF: number;
     let lastCheckedTime = -1;
 
     const followPlayback = () => {
-      if (audio.engine) {
+      // ONLY track when audio is actively playing, preventing selection hijack when paused
+      if (audio.engine && audio.engine.clock?.isPlaying) {
         const currentTime = audio.engine.getCurrentTime();
 
         if (Math.abs(currentTime - lastCheckedTime) > 0.04) {
@@ -113,14 +108,10 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
           }
 
           if (matchedIdx !== null && matchedIdx !== useSyncStore.getState().currentLineIndex) {
-            // When in syncing mode, only auto-advance through already synced lines or if audio seeked
-            if (mode === 'syncing') {
-              const currentLine = lines[useSyncStore.getState().currentLineIndex];
-              if (currentLine && currentLine.status === 'pending' && currentLine.start === null) {
-                if (matchedIdx < useSyncStore.getState().currentLineIndex) {
-                  useSyncStore.getState().setCurrentLineIndex(matchedIdx);
-                }
-              } else {
+            const currentLine = lines[useSyncStore.getState().currentLineIndex];
+            // If waiting to sync a pending line, don't jump away unless playback seeked far away
+            if (currentLine && currentLine.status === 'pending' && currentLine.start === null) {
+              if (matchedIdx < useSyncStore.getState().currentLineIndex) {
                 useSyncStore.getState().setCurrentLineIndex(matchedIdx);
               }
             } else {
@@ -141,49 +132,20 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
   const progressPercent = totalLyrics > 0 ? Math.round((syncedCount / totalLyrics) * 100) : 0;
   const hasSyncedLines = lines.some(l => l.start !== null);
 
-  const handleUndo = (e: React.MouseEvent) => {
-    e.preventDefault();
-    (e.currentTarget as HTMLElement).blur();
-    undoLastTap();
-    if (audio.engine.clock.isPlaying) {
-      audio.engine.seek(Math.max(0, audio.engine.getCurrentTime() - 2.5));
-    }
-  };
-
-
   const handlePrevLine = (e: React.MouseEvent) => {
     e.preventDefault();
     (e.currentTarget as HTMLElement).blur();
-    if (isPlaying) {
-      goToPreviousLine((cueTime) => {
-        const target = Math.max(0, cueTime > 0 ? cueTime - 1.5 : audio.engine.getCurrentTime() - 2.5);
-        audio.engine.seek(target);
-      });
-    } else {
-      goToPreviousLine((cueTime) => {
-        audio.engine.seek(cueTime);
-      });
-    }
+    goToPreviousLine((cueTime) => {
+      audio.engine.seek(cueTime);
+    });
   };
 
   const handleNextLine = (e: React.MouseEvent) => {
     e.preventDefault();
     (e.currentTarget as HTMLElement).blur();
-    if (isPlaying) {
-      const audioTime = audio.engine.mapEventToAudioTime(performance.now(), project?.settings.tapOffsetMs ?? -120);
-      tapLine(audioTime);
-    } else {
-      goToNextLine((cueTime) => {
-        audio.engine.seek(cueTime);
-      });
-    }
-  };
-
-  const handleRewindCurrent = (e: React.MouseEvent) => {
-    e.preventDefault();
-    (e.currentTarget as HTMLElement).blur();
-    const current = audio.engine.getCurrentTime();
-    audio.engine.seek(Math.max(0, current - 2.5));
+    goToNextLine((cueTime) => {
+      audio.engine.seek(cueTime);
+    });
   };
 
   return (
@@ -340,10 +302,10 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
                   size="icon"
                   onClick={handlePrevLine}
                   disabled={currentLineIndex <= 0}
-                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 cursor-pointer shrink-0 transition-transform active:scale-95 flex items-center justify-center p-0"
-                  title={isPlaying ? "Reintentar línea anterior (retrocede 1.5s) (Atajo: ↑ o P)" : "Línea anterior (Atajo: ↑ o P)"}
+                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 cursor-pointer shrink-0 transition-transform active:scale-95 flex items-center justify-center p-0"
+                  title="Línea anterior (Atajo: ↑ o P)"
                 >
-                  <ChevronUp className="h-5 w-5 sm:h-5.5 sm:w-5.5 stroke-[2.2] text-zinc-300" />
+                  <ChevronUp className="h-5 w-5 sm:h-5.5 sm:w-5.5 stroke-[2.2]" />
                 </Button>
 
                 <Button
@@ -352,30 +314,10 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
                   size="icon"
                   onClick={handleNextLine}
                   disabled={currentLineIndex >= lines.length - 1}
-                  className={cn(
-                    "h-9 w-9 sm:h-10 sm:w-10 rounded-xl cursor-pointer shrink-0 transition-all active:scale-95 flex items-center justify-center p-0",
-                    isPlaying
-                      ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]"
-                      : "bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800"
-                  )}
-                  title={isPlaying ? "Marcar timestamp de esta línea y avanzar (Atajo: ↓ o N)" : "Línea siguiente (Atajo: ↓ o N)"}
+                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 cursor-pointer shrink-0 transition-transform active:scale-95 flex items-center justify-center p-0"
+                  title="Línea siguiente (Atajo: ↓ o N)"
                 >
-                  <ChevronDown className={cn(
-                    "h-5 w-5 sm:h-5.5 sm:w-5.5 stroke-[2.2]",
-                    isPlaying ? "text-white" : "text-zinc-300"
-                  )} />
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRewindCurrent}
-                  className="text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 h-8 sm:h-9 px-1.5 sm:px-2 rounded-lg cursor-pointer flex items-center"
-                  title="Rebobinar 2.5s en línea actual (Atajo: R)"
-                >
-                  <RotateCcw className="h-3 w-3 sm:h-3.5 sm:w-3.5 sm:mr-1" />
-                  <span className="text-[10px] sm:text-xs">-2.5s</span>
+                  <ChevronDown className="h-5 w-5 sm:h-5.5 sm:w-5.5 stroke-[2.2]" />
                 </Button>
               </div>
             }
@@ -383,23 +325,8 @@ export function SyncView({ onOpenCalibration, onContinueToPreview, onBackToSetup
               <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400 bg-zinc-900/80 px-2.5 py-0.5 rounded-full border border-zinc-800/80">
                 <span>Play/Pausa: <kbd className="px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700">Espacio</kbd></span>
                 <span className="text-zinc-600">•</span>
-                <span>Marcar/Avanzar: <kbd className="px-1 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700">↓</kbd></span>
-                <span className="text-zinc-600">•</span>
-                <span>Anterior: <kbd className="px-1 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700">↑</kbd></span>
+                <span>Navegar: <kbd className="px-1 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700">↑</kbd><kbd className="px-1 py-0.2 rounded bg-zinc-800 text-zinc-200 font-semibold border border-zinc-700 ml-0.5">↓</kbd></span>
               </div>
-            }
-            rightActions={
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleUndo}
-                className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white h-8 sm:h-9 px-2 sm:px-2.5 text-xs rounded-xl cursor-pointer flex items-center"
-                title="Deshacer última marca (Backspace / Ctrl+Z)"
-              >
-                <Undo2 className="h-3.5 w-3.5 sm:mr-1 text-amber-400" />
-                <span className="hidden sm:inline">Deshacer</span>
-              </Button>
             }
           />
         </div>
